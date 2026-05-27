@@ -210,49 +210,203 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
 }) {
   const [showPhoto, setShowPhoto] = useState(false)
 
+  // Shared content blocks (materials, links, notes, actions) — used on both mobile and desktop
+  const sharedContent = (
+    <>
+      {/* Materials */}
+      {(model.materials || model.yarn_used || model.time_hours != null) && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Materiais e produção</h3>
+          {model.yarn_used && <p className="text-sm"><span className="text-muted-foreground">Fio:</span> {model.yarn_used}</p>}
+          {model.materials && <p className="text-sm"><span className="text-muted-foreground">Materiais:</span> {model.materials}</p>}
+          {(model.time_hours != null || model.time_minutes != null) && (
+            <p className="text-sm"><span className="text-muted-foreground">Tempo:</span> {formatTime(model.time_hours || 0, model.time_minutes || 0)}</p>
+          )}
+          {model.cost_breakdown && (
+            <div className="bg-muted/40 rounded-xl p-3 text-xs space-y-1">
+              {model.cost_breakdown.materials_cost != null && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Materiais</span><span>{formatCurrency(model.cost_breakdown.materials_cost)}</span></div>
+              )}
+              {model.cost_breakdown.labor_cost != null && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Mão de obra</span><span>{formatCurrency(model.cost_breakdown.labor_cost)}</span></div>
+              )}
+              {model.cost_breakdown.energy_cost != null && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Energia</span><span>{formatCurrency(model.cost_breakdown.energy_cost)}</span></div>
+              )}
+              {model.cost_breakdown.filament_cost != null && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Filamento</span><span>{formatCurrency(model.cost_breakdown.filament_cost)}</span></div>
+              )}
+              {model.cost_breakdown.extras?.map((e, i) => (
+                <div key={i} className="flex justify-between"><span className="text-muted-foreground">{e.name || 'Extra'}</span><span>{formatCurrency(e.value)}</span></div>
+              ))}
+              {model.cost_breakdown.subtotal != null && (
+                <div className="flex justify-between font-medium border-t border-border pt-1 mt-1"><span>Subtotal</span><span>{formatCurrency(model.cost_breakdown.subtotal)}</span></div>
+              )}
+              {model.cost_breakdown.company_margin != null && (() => {
+                const sub = model.cost_breakdown!.subtotal || 0
+                const ca = sub * model.cost_breakdown!.company_margin! / 100
+                const pa = model.cost_breakdown!.profit_margin != null ? (sub + ca) * model.cost_breakdown!.profit_margin / 100 : 0
+                return <>
+                  <div className="flex justify-between text-muted-foreground"><span>Empresa ({model.cost_breakdown!.company_margin}%)</span><span>+{formatCurrency(ca)}</span></div>
+                  {model.cost_breakdown!.profit_margin != null && (
+                    <div className="flex justify-between text-muted-foreground"><span>Lucro ({model.cost_breakdown!.profit_margin}%)</span><span>+{formatCurrency(pa)}</span></div>
+                  )}
+                </>
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Links */}
+      {(model.youtube_link || model.tutorial_link || model.material_link || model.stl_link) && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Links úteis</h3>
+          <div className="flex flex-wrap gap-2">
+            {model.youtube_link && (
+              <a href={model.youtube_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
+                <Youtube className="h-3.5 w-3.5" /> YouTube
+              </a>
+            )}
+            {model.tutorial_link && (
+              <a href={model.tutorial_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
+                <BookOpen className="h-3.5 w-3.5" /> Tutorial
+              </a>
+            )}
+            {model.material_link && (
+              <a href={model.material_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
+                <ShoppingBag className="h-3.5 w-3.5" /> Material
+              </a>
+            )}
+            {model.stl_link && (
+              <a href={model.stl_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
+                <Link2 className="h-3.5 w-3.5" /> STL
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {(model.notes || model.tips) && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações / dicas</h3>
+          {model.notes && <p className="text-sm leading-relaxed whitespace-pre-wrap">{model.notes}</p>}
+          {model.tips && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{model.tips}</p>}
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Actions */}
+      <div className="flex flex-col gap-2">
+        <Button onClick={onUseInCalc} className="w-full">
+          Usar este modelo na calculadora
+        </Button>
+        {isOwner && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onEdit} className="flex-1 gap-2">
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+            <Button variant="outline" onClick={onDelete} className="flex-1 gap-2 text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <>
-      <div className="fixed inset-0 z-50" onClick={onClose}>
+      {/* ── MOBILE: tela cheia que desliza de baixo ── */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed inset-0 z-50 bg-card flex flex-col md:hidden"
+      >
+        {/* Header fixo com X sempre visível */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0 bg-card">
+          <button
+            onClick={onClose}
+            className="p-1.5 -ml-1.5 rounded-xl hover:bg-muted active:bg-muted transition-colors shrink-0"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <span className="font-semibold text-sm truncate flex-1">{model.name}</span>
+          <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 text-[11px]">
+            {STATUS_MAP[model.status].label}
+          </Badge>
+        </div>
+
+        {/* Conteúdo rolável */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Foto */}
+          {model.photo_url ? (
+            <button
+              onClick={() => setShowPhoto(true)}
+              className="w-full block relative group"
+              aria-label="Ver foto em tela cheia"
+            >
+              <img src={model.photo_url} alt={model.name} className="w-full h-56 object-cover" />
+              <div className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 group-active:opacity-100 transition-opacity bg-gradient-to-t from-black/30 to-transparent">
+                <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">Toque para ampliar</span>
+              </div>
+            </button>
+          ) : (
+            <div className="w-full h-40 bg-muted/50 flex items-center justify-center">
+              <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
+            </div>
+          )}
+
+          <div className="p-5 space-y-4 pb-10">
+            <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
+            {sharedContent}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── DESKTOP: modal centralizado ── */}
+      <div className="fixed inset-0 z-50 hidden md:block" onClick={onClose}>
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.15 }}
           onClick={e => e.stopPropagation()}
-          className="absolute bottom-0 left-0 right-0 md:inset-0 md:flex md:items-center md:justify-center md:p-4"
+          className="absolute inset-0 flex items-center justify-center p-4"
         >
-          <div className="bg-card rounded-t-3xl md:rounded-2xl w-full md:max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Photo area with floating X */}
-            <div className="relative">
+          <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            {/* Foto fora do scroll — evita X ser cortado */}
+            <div className="relative shrink-0">
               {model.photo_url ? (
-                <button
-                  onClick={() => setShowPhoto(true)}
-                  className="w-full block group"
-                  aria-label="Ver foto em tela cheia"
-                >
-                  <img src={model.photo_url} alt={model.name} className="w-full h-52 object-cover rounded-t-3xl md:rounded-t-2xl" />
-                  <div className="absolute inset-0 rounded-t-3xl md:rounded-t-2xl flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-gradient-to-t from-black/30 to-transparent">
-                    <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
-                      Toque para ampliar
-                    </span>
+                <button onClick={() => setShowPhoto(true)} className="w-full block group" aria-label="Ver foto em tela cheia">
+                  <img src={model.photo_url} alt={model.name} className="w-full h-52 object-cover rounded-t-2xl" />
+                  <div className="absolute inset-0 rounded-t-2xl flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/30 to-transparent">
+                    <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">Clique para ampliar</span>
                   </div>
                 </button>
               ) : (
-                <div className="w-full h-32 bg-muted/50 rounded-t-3xl md:rounded-t-2xl flex items-center justify-center">
+                <div className="w-full h-32 bg-muted/50 rounded-t-2xl flex items-center justify-center">
                   <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
                 </div>
               )}
-              {/* Floating close button — always visible, high contrast */}
+              {/* X flutuante — fora do scroll, sem recorte */}
               <button
                 onClick={onClose}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/55 hover:bg-black/75 active:bg-black/90 transition-colors text-white backdrop-blur-sm shadow-lg"
+                className="absolute top-3 right-3 p-2 rounded-full bg-black/55 hover:bg-black/75 transition-colors text-white backdrop-blur-sm shadow-lg"
                 aria-label="Fechar"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            {/* Conteúdo rolável */}
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
@@ -260,142 +414,41 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
                 </div>
                 <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 mt-1">{STATUS_MAP[model.status].label}</Badge>
               </div>
-
-            {/* Materials */}
-            {(model.materials || model.yarn_used || model.time_hours != null) && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Materiais e produção</h3>
-                {model.yarn_used && <p className="text-sm"><span className="text-muted-foreground">Fio:</span> {model.yarn_used}</p>}
-                {model.materials && <p className="text-sm"><span className="text-muted-foreground">Materiais:</span> {model.materials}</p>}
-                {(model.time_hours != null || model.time_minutes != null) && (
-                  <p className="text-sm"><span className="text-muted-foreground">Tempo:</span> {formatTime(model.time_hours || 0, model.time_minutes || 0)}</p>
-                )}
-                {model.cost_breakdown && (
-                  <div className="bg-muted/40 rounded-xl p-3 text-xs space-y-1">
-                    {model.cost_breakdown.materials_cost != null && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Materiais</span><span>{formatCurrency(model.cost_breakdown.materials_cost)}</span></div>
-                    )}
-                    {model.cost_breakdown.labor_cost != null && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Mão de obra</span><span>{formatCurrency(model.cost_breakdown.labor_cost)}</span></div>
-                    )}
-                    {model.cost_breakdown.energy_cost != null && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Energia</span><span>{formatCurrency(model.cost_breakdown.energy_cost)}</span></div>
-                    )}
-                    {model.cost_breakdown.filament_cost != null && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Filamento</span><span>{formatCurrency(model.cost_breakdown.filament_cost)}</span></div>
-                    )}
-                    {model.cost_breakdown.extras?.map((e, i) => (
-                      <div key={i} className="flex justify-between"><span className="text-muted-foreground">{e.name || 'Extra'}</span><span>{formatCurrency(e.value)}</span></div>
-                    ))}
-                    {model.cost_breakdown.subtotal != null && (
-                      <div className="flex justify-between font-medium border-t border-border pt-1 mt-1"><span>Subtotal</span><span>{formatCurrency(model.cost_breakdown.subtotal)}</span></div>
-                    )}
-                    {model.cost_breakdown.company_margin != null && (() => {
-                      const sub = model.cost_breakdown!.subtotal || 0
-                      const ca = sub * model.cost_breakdown!.company_margin! / 100
-                      const pa = model.cost_breakdown!.profit_margin != null ? (sub + ca) * model.cost_breakdown!.profit_margin / 100 : 0
-                      return <>
-                        <div className="flex justify-between text-muted-foreground"><span>Empresa ({model.cost_breakdown!.company_margin}%)</span><span>+{formatCurrency(ca)}</span></div>
-                        {model.cost_breakdown!.profit_margin != null && (
-                          <div className="flex justify-between text-muted-foreground"><span>Lucro ({model.cost_breakdown!.profit_margin}%)</span><span>+{formatCurrency(pa)}</span></div>
-                        )}
-                      </>
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Links */}
-            {(model.youtube_link || model.tutorial_link || model.material_link || model.stl_link) && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Links úteis</h3>
-                <div className="flex flex-wrap gap-2">
-                  {model.youtube_link && (
-                    <a href={model.youtube_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
-                      <Youtube className="h-3.5 w-3.5" /> YouTube
-                    </a>
-                  )}
-                  {model.tutorial_link && (
-                    <a href={model.tutorial_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
-                      <BookOpen className="h-3.5 w-3.5" /> Tutorial
-                    </a>
-                  )}
-                  {model.material_link && (
-                    <a href={model.material_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
-                      <ShoppingBag className="h-3.5 w-3.5" /> Material
-                    </a>
-                  )}
-                  {model.stl_link && (
-                    <a href={model.stl_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
-                      <Link2 className="h-3.5 w-3.5" /> STL
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {(model.notes || model.tips) && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações / dicas</h3>
-                {model.notes && <p className="text-sm leading-relaxed whitespace-pre-wrap">{model.notes}</p>}
-                {model.tips && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{model.tips}</p>}
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2">
-              <Button onClick={onUseInCalc} className="w-full">
-                Usar este modelo na calculadora
-              </Button>
-              {isOwner && (
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={onEdit} className="flex-1 gap-2">
-                    <Pencil className="h-4 w-4" /> Editar
-                  </Button>
-                  <Button variant="outline" onClick={onDelete} className="flex-1 gap-2 text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" /> Excluir
-                  </Button>
-                </div>
-              )}
+              {sharedContent}
             </div>
           </div>
-        </div>
-      </motion.div>
-    </div>
-
-    {/* Full-screen photo viewer */}
-    <AnimatePresence>
-      {showPhoto && model.photo_url && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setShowPhoto(false)}
-        >
-          <button
-            onClick={() => setShowPhoto(false)}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors text-white"
-            aria-label="Fechar foto"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <motion.img
-            initial={{ scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.92, opacity: 0 }}
-            src={model.photo_url}
-            alt={model.name}
-            className="max-w-full max-h-full object-contain rounded-xl"
-            onClick={e => e.stopPropagation()}
-          />
         </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+
+      {/* Visualizador de foto em tela cheia */}
+      <AnimatePresence>
+        {showPhoto && model.photo_url && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setShowPhoto(false)}
+          >
+            <button
+              onClick={() => setShowPhoto(false)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors text-white"
+              aria-label="Fechar foto"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              src={model.photo_url}
+              alt={model.name}
+              className="max-w-full max-h-full object-contain rounded-xl"
+              onClick={e => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
