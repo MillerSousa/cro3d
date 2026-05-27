@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Image as ImageIcon, ExternalLink, Pencil, Trash2,
   LayoutGrid, Youtube, BookOpen, ShoppingBag, Link2, X, Check,
-  Loader2, ChevronDown,
+  Loader2, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,9 +262,26 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
                     {model.cost_breakdown.energy_cost != null && (
                       <div className="flex justify-between"><span className="text-muted-foreground">Energia</span><span>{formatCurrency(model.cost_breakdown.energy_cost)}</span></div>
                     )}
+                    {model.cost_breakdown.filament_cost != null && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">Filamento</span><span>{formatCurrency(model.cost_breakdown.filament_cost)}</span></div>
+                    )}
+                    {model.cost_breakdown.extras?.map((e, i) => (
+                      <div key={i} className="flex justify-between"><span className="text-muted-foreground">{e.name || 'Extra'}</span><span>{formatCurrency(e.value)}</span></div>
+                    ))}
                     {model.cost_breakdown.subtotal != null && (
                       <div className="flex justify-between font-medium border-t border-border pt-1 mt-1"><span>Subtotal</span><span>{formatCurrency(model.cost_breakdown.subtotal)}</span></div>
                     )}
+                    {model.cost_breakdown.company_margin != null && (() => {
+                      const sub = model.cost_breakdown!.subtotal || 0
+                      const ca = sub * model.cost_breakdown!.company_margin! / 100
+                      const pa = model.cost_breakdown!.profit_margin != null ? (sub + ca) * model.cost_breakdown!.profit_margin / 100 : 0
+                      return <>
+                        <div className="flex justify-between text-muted-foreground"><span>Empresa ({model.cost_breakdown!.company_margin}%)</span><span>+{formatCurrency(ca)}</span></div>
+                        {model.cost_breakdown!.profit_margin != null && (
+                          <div className="flex justify-between text-muted-foreground"><span>Lucro ({model.cost_breakdown!.profit_margin}%)</span><span>+{formatCurrency(pa)}</span></div>
+                        )}
+                      </>
+                    })()}
                   </div>
                 )}
               </div>
@@ -344,6 +361,8 @@ function ModelForm({
   const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const prefillBreakdown = editModel ? editModel.cost_breakdown : prefillData?.breakdown
+
   const [type, setType] = useState<'crochet' | '3d'>(editModel?.type || prefillData?.type || 'crochet')
   const [name, setName] = useState(editModel?.name || '')
   const [price, setPrice] = useState(editModel?.price_per_unit || prefillData?.price || 0)
@@ -363,22 +382,39 @@ function ModelForm({
   const [photoError, setPhotoError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Breakdown / custos
+  const [showCosts, setShowCosts] = useState(!!prefillBreakdown)
+  const [materialsCost, setMaterialsCost] = useState(prefillBreakdown?.materials_cost ?? 0)
+  const [laborCost, setLaborCost] = useState(prefillBreakdown?.labor_cost ?? 0)
+  const [energyCost, setEnergyCost] = useState(prefillBreakdown?.energy_cost ?? 0)
+  const [filamentCost, setFilamentCost] = useState(prefillBreakdown?.filament_cost ?? 0)
+  const [breakdownExtras, setBreakdownExtras] = useState<{ name: string; value: number }[]>(
+    prefillBreakdown?.extras ?? []
+  )
+  const [companyMargin, setCompanyMargin] = useState(prefillBreakdown?.company_margin ?? 0)
+  const [profitMargin, setProfitMargin] = useState(prefillBreakdown?.profit_margin ?? 0)
+
+  // Preço calculado em tempo real
+  const extrasTotal = breakdownExtras.reduce((s, e) => s + e.value, 0)
+  const baseCost = type === 'crochet'
+    ? materialsCost + laborCost + extrasTotal
+    : energyCost + filamentCost + extrasTotal
+  const companyAdd = baseCost * (companyMargin / 100)
+  const profitAdd = (baseCost + companyAdd) * (profitMargin / 100)
+  const calculatedPrice = baseCost > 0 ? baseCost + companyAdd + profitAdd : 0
+
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setPhotoError('')
     if (!['image/jpeg', 'image/png'].includes(file.type)) { setPhotoError('Apenas JPG e PNG são aceitos.'); return }
     if (file.size > 5 * 1024 * 1024) { setPhotoError('O arquivo deve ter no máximo 5MB.'); return }
-
     setUploading(true)
     try {
       const ext = file.name.split('.').pop()
       const path = `${user!.id}/${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('model-photos').upload(path, file, { upsert: true })
-      if (error) {
-        setPhotoError('Erro ao enviar foto: ' + error.message)
-        return
-      }
+      if (error) { setPhotoError('Erro ao enviar foto: ' + error.message); return }
       const { data: { publicUrl } } = supabase.storage.from('model-photos').getPublicUrl(path)
       setPhotoUrl(publicUrl)
     } catch {
@@ -390,19 +426,31 @@ function ModelForm({
 
   async function handleSave() {
     if (!name.trim()) { toast.error('Informe o nome do modelo'); return }
-    if (!price) { toast.error('Informe o preço'); return }
+    const finalPrice = baseCost > 0 ? parseFloat(calculatedPrice.toFixed(2)) : price
+    if (!finalPrice) { toast.error('Informe o preço ou preencha os custos'); return }
     setSaving(true)
+
+    const breakdown: CostBreakdown | null = (baseCost > 0 || companyMargin > 0 || profitMargin > 0) ? {
+      ...(type === 'crochet' && materialsCost > 0 ? { materials_cost: materialsCost } : {}),
+      ...(type === 'crochet' && laborCost > 0 ? { labor_cost: laborCost } : {}),
+      ...(type === '3d' && energyCost > 0 ? { energy_cost: energyCost } : {}),
+      ...(type === '3d' && filamentCost > 0 ? { filament_cost: filamentCost } : {}),
+      ...(breakdownExtras.length > 0 ? { extras: breakdownExtras } : {}),
+      ...(baseCost > 0 ? { subtotal: baseCost } : {}),
+      ...(companyMargin > 0 ? { company_margin: companyMargin } : {}),
+      ...(profitMargin > 0 ? { profit_margin: profitMargin } : {}),
+    } : null
 
     const payload = {
       user_id: user!.id,
-      type, name: name.trim(), price_per_unit: price, status,
+      type, name: name.trim(), price_per_unit: finalPrice, status,
       materials: materials || null, yarn_used: yarnUsed || null,
       stl_link: stlLink || null, material_link: materialLink || null,
       youtube_link: youtubeLink || null, tutorial_link: tutorialLink || null,
       notes: notes || null, tips: tips || null,
       time_hours: timeHours || null, time_minutes: timeMinutes || null,
       photo_url: photoUrl || null,
-      cost_breakdown: editModel ? (editModel.cost_breakdown ?? null) : (prefillData?.breakdown ?? null),
+      cost_breakdown: breakdown,
       updated_at: new Date().toISOString(),
     }
 
@@ -423,15 +471,13 @@ function ModelForm({
       <DialogHeader>
         <DialogTitle>{editModel ? 'Editar modelo' : 'Novo modelo'}</DialogTitle>
       </DialogHeader>
-      <div className="px-6 space-y-4 pb-2">
+      <div className="px-6 space-y-4 pb-2 overflow-y-auto max-h-[calc(90vh-9rem)]">
+
         {/* Type toggle */}
         <div className="flex gap-2 p-1 bg-muted rounded-xl">
           {(['crochet', '3d'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${type === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
-            >
+            <button key={t} onClick={() => setType(t)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${type === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>
               {t === 'crochet' ? 'Crochê' : 'Impressão 3D'}
             </button>
           ))}
@@ -449,11 +495,8 @@ function ModelForm({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="w-full h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground"
-              >
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="w-full h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <ImageIcon className="h-6 w-6" />}
                 <span className="text-xs">{uploading ? 'Enviando...' : 'Clique para adicionar foto (JPG/PNG, máx. 5MB)'}</span>
               </button>
@@ -463,29 +506,41 @@ function ModelForm({
           </div>
         </div>
 
+        {/* Nome */}
         <div>
           <Label className="text-xs">Nome do modelo *</Label>
           <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Tapete redondo bege" className="mt-1" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Preço — calculado se há breakdown, manual caso contrário */}
+        {baseCost > 0 ? (
+          <div>
+            <Label className="text-xs text-muted-foreground">Preço por unidade — calculado pelos custos abaixo</Label>
+            <div className="mt-1 px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
+              <p className="text-2xl font-bold text-primary">{formatCurrency(calculatedPrice)}</p>
+            </div>
+          </div>
+        ) : (
           <div>
             <Label className="text-xs">Preço por unidade (R$) *</Label>
             <Input type="number" min="0" step="0.01" value={price || ''} onChange={e => setPrice(parseFloat(e.target.value) || 0)} className="mt-1" />
           </div>
-          <div>
-            <Label className="text-xs">Status</Label>
-            <Select value={status} onValueChange={v => setStatus(v as DashboardModel['status'])}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="available">Disponível</SelectItem>
-                <SelectItem value="in_production">Em produção</SelectItem>
-                <SelectItem value="discontinued">Descontinuado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        )}
+
+        {/* Status */}
+        <div>
+          <Label className="text-xs">Status</Label>
+          <Select value={status} onValueChange={v => setStatus(v as DashboardModel['status'])}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="available">Disponível</SelectItem>
+              <SelectItem value="in_production">Em produção</SelectItem>
+              <SelectItem value="discontinued">Descontinuado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
+        {/* Campo específico por tipo */}
         {type === 'crochet' && (
           <div>
             <Label className="text-xs">Fio utilizado</Label>
@@ -499,11 +554,125 @@ function ModelForm({
           </div>
         )}
 
+        {/* ── CUSTOS E MARGENS (accordion) ── */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <button
+            onClick={() => setShowCosts(p => !p)}
+            className="flex items-center justify-between w-full px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
+          >
+            <span className="text-sm font-medium">Custos e margens</span>
+            {showCosts
+              ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+
+          {showCosts && (
+            <div className="p-4 space-y-4 border-t border-border">
+              {/* Crochê */}
+              {type === 'crochet' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Materiais (R$)</Label>
+                    <Input type="number" min="0" step="0.01" value={materialsCost || ''} onChange={e => setMaterialsCost(parseFloat(e.target.value) || 0)} placeholder="0,00" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Mão de obra (R$)</Label>
+                    <Input type="number" min="0" step="0.01" value={laborCost || ''} onChange={e => setLaborCost(parseFloat(e.target.value) || 0)} placeholder="0,00" className="mt-1" />
+                  </div>
+                </div>
+              )}
+              {/* 3D */}
+              {type === '3d' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Energia (R$)</Label>
+                    <Input type="number" min="0" step="0.01" value={energyCost || ''} onChange={e => setEnergyCost(parseFloat(e.target.value) || 0)} placeholder="0,00" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Filamento (R$)</Label>
+                    <Input type="number" min="0" step="0.01" value={filamentCost || ''} onChange={e => setFilamentCost(parseFloat(e.target.value) || 0)} placeholder="0,00" className="mt-1" />
+                  </div>
+                </div>
+              )}
+
+              {/* Extras / insumos */}
+              <div>
+                <Label className="text-xs">Extras / insumos</Label>
+                <div className="mt-2 space-y-2">
+                  {breakdownExtras.map((extra, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Nome"
+                        value={extra.name}
+                        onChange={e => setBreakdownExtras(p => p.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))}
+                        className="flex-1 text-sm"
+                      />
+                      <Input
+                        type="number" min="0" step="0.01"
+                        value={extra.value || ''}
+                        onChange={e => setBreakdownExtras(p => p.map((x, i) => i === idx ? { ...x, value: parseFloat(e.target.value) || 0 } : x))}
+                        placeholder="R$"
+                        className="w-24 text-sm"
+                      />
+                      <button onClick={() => setBreakdownExtras(p => p.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setBreakdownExtras(p => [...p, { name: '', value: 0 }])} className="w-full gap-2 text-xs h-8 border-dashed">
+                    <Plus className="h-3.5 w-3.5" /> Adicionar extra
+                  </Button>
+                </div>
+              </div>
+
+              {/* Subtotal */}
+              {baseCost > 0 && (
+                <div className="flex justify-between items-center py-2 border-t border-border text-sm">
+                  <span className="text-muted-foreground">Subtotal (custo real)</span>
+                  <span className="font-medium">{formatCurrency(baseCost)}</span>
+                </div>
+              )}
+
+              {/* Margens */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">% para a empresa</Label>
+                  <div className="relative mt-1">
+                    <Input type="number" min="0" max="100" value={companyMargin || ''} onChange={e => setCompanyMargin(parseFloat(e.target.value) || 0)} placeholder="20" className="pr-7" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">% de lucro líquido</Label>
+                  <div className="relative mt-1">
+                    <Input type="number" min="0" max="100" value={profitMargin || ''} onChange={e => setProfitMargin(parseFloat(e.target.value) || 0)} placeholder="30" className="pr-7" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview do preço calculado */}
+              {calculatedPrice > 0 && (
+                <div className="rounded-xl bg-primary/10 border border-primary/20 p-3 space-y-1">
+                  <p className="text-xs text-primary/70">Preço calculado</p>
+                  <p className="text-xl font-bold text-primary">{formatCurrency(calculatedPrice)}</p>
+                  <div className="flex justify-between text-xs text-muted-foreground pt-1">
+                    <span>Empresa ({companyMargin}%): +{formatCurrency(companyAdd)}</span>
+                    <span>Lucro ({profitMargin}%): +{formatCurrency(profitAdd)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Materiais gerais */}
         <div>
           <Label className="text-xs">Materiais gerais</Label>
           <Textarea value={materials} onChange={e => setMaterials(e.target.value)} placeholder="Descreva os materiais usados..." className="mt-1 min-h-[60px]" />
         </div>
 
+        {/* Tempo */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Tempo — horas</Label>
@@ -515,6 +684,7 @@ function ModelForm({
           </div>
         </div>
 
+        {/* Links */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Links úteis (opcionais)</Label>
           <Input value={youtubeLink} onChange={e => setYoutubeLink(e.target.value)} placeholder="YouTube..." className="text-sm" />

@@ -91,7 +91,10 @@ function AppContent() {
       breakdown: {
         materials_cost: materialsCost,
         labor_cost: laborCost,
+        extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: (e.qty * e.unitPrice) / data.qty })),
         subtotal: materialsCost + laborCost + extrasCost,
+        company_margin: data.companyMargin,
+        profit_margin: data.profitMargin,
       },
     })
     setActiveTab('dashboard')
@@ -101,13 +104,17 @@ function AppContent() {
     const totalH = data.timeHours + data.timeMinutes / 60
     const energy = ((data.printer?.watts || 0) / 1000) * totalH * data.kwh
     const filament = (data.gramsUsed / 1000) * data.filamentPricePerKg
+    const extrasCost = data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0)
     setDashboardPrefill({
       type: '3d',
       price: data.price,
       breakdown: {
         energy_cost: energy,
         filament_cost: filament,
-        subtotal: energy + filament,
+        extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: e.qty * e.unitPrice })),
+        subtotal: energy + filament + extrasCost,
+        company_margin: data.companyMargin,
+        profit_margin: data.profitMargin,
       },
     })
     setActiveTab('dashboard')
