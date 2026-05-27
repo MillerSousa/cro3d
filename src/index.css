@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 20 14% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 20%;
+    --primary: 18 47% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 43% 87%;
+    --secondary-foreground: 20 14% 25%;
+    --muted: 38 30% 93%;
+    --muted-foreground: 20 10% 50%;
+    --accent: 140 15% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 38 20% 88%;
+    --input: 38 20% 88%;
+    --ring: 18 47% 54%;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 20 14% 10%;
+    --foreground: 38 30% 93%;
+    --card: 20 14% 13%;
+    --card-foreground: 38 30% 93%;
+    --popover: 20 14% 13%;
+    --popover-foreground: 38 30% 93%;
+    --primary: 18 47% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 14% 18%;
+    --secondary-foreground: 38 30% 85%;
+    --muted: 20 14% 18%;
+    --muted-foreground: 20 10% 55%;
+    --accent: 140 15% 52%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 14% 22%;
+    --input: 20 14% 22%;
+    --ring: 18 47% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Safe area for iOS notch/home bar */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .card-shadow {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .card-shadow-lg {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  }
+}
+
+/* Custom scrollbar for desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
+
+/* Number input — remove arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
