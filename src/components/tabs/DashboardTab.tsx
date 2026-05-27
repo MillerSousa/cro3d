@@ -208,39 +208,58 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
   onUseInCalc: () => void
   isOwner: boolean
 }) {
-  return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 40 }}
-        onClick={e => e.stopPropagation()}
-        className="absolute bottom-0 left-0 right-0 md:inset-0 md:flex md:items-center md:justify-center md:p-4"
-      >
-        <div className="bg-card rounded-t-3xl md:rounded-2xl w-full md:max-w-lg md:max-h-[90vh] overflow-y-auto">
-          {/* Photo */}
-          {model.photo_url ? (
-            <img src={model.photo_url} alt={model.name} className="w-full h-52 object-cover rounded-t-3xl md:rounded-t-2xl" />
-          ) : (
-            <div className="w-full h-32 bg-muted/50 rounded-t-3xl md:rounded-t-2xl flex items-center justify-center">
-              <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
-            </div>
-          )}
+  const [showPhoto, setShowPhoto] = useState(false)
 
-          <div className="p-5 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
-                <p className="text-2xl font-bold text-primary mt-1">{formatCurrency(model.price_per_unit)}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={STATUS_MAP[model.status].variant}>{STATUS_MAP[model.status].label}</Badge>
-                <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground">
-                  <X className="h-4 w-4" />
+  return (
+    <>
+      <div className="fixed inset-0 z-50" onClick={onClose}>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 40 }}
+          onClick={e => e.stopPropagation()}
+          className="absolute bottom-0 left-0 right-0 md:inset-0 md:flex md:items-center md:justify-center md:p-4"
+        >
+          <div className="bg-card rounded-t-3xl md:rounded-2xl w-full md:max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Photo area with floating X */}
+            <div className="relative">
+              {model.photo_url ? (
+                <button
+                  onClick={() => setShowPhoto(true)}
+                  className="w-full block group"
+                  aria-label="Ver foto em tela cheia"
+                >
+                  <img src={model.photo_url} alt={model.name} className="w-full h-52 object-cover rounded-t-3xl md:rounded-t-2xl" />
+                  <div className="absolute inset-0 rounded-t-3xl md:rounded-t-2xl flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity bg-gradient-to-t from-black/30 to-transparent">
+                    <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+                      Toque para ampliar
+                    </span>
+                  </div>
                 </button>
-              </div>
+              ) : (
+                <div className="w-full h-32 bg-muted/50 rounded-t-3xl md:rounded-t-2xl flex items-center justify-center">
+                  <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+              )}
+              {/* Floating close button — always visible, high contrast */}
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 p-2 rounded-full bg-black/55 hover:bg-black/75 active:bg-black/90 transition-colors text-white backdrop-blur-sm shadow-lg"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
+
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
+                  <p className="text-2xl font-bold text-primary mt-1">{formatCurrency(model.price_per_unit)}</p>
+                </div>
+                <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 mt-1">{STATUS_MAP[model.status].label}</Badge>
+              </div>
 
             {/* Materials */}
             {(model.materials || model.yarn_used || model.time_hours != null) && (
@@ -347,6 +366,37 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
         </div>
       </motion.div>
     </div>
+
+    {/* Full-screen photo viewer */}
+    <AnimatePresence>
+      {showPhoto && model.photo_url && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setShowPhoto(false)}
+        >
+          <button
+            onClick={() => setShowPhoto(false)}
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors text-white"
+            aria-label="Fechar foto"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <motion.img
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.92, opacity: 0 }}
+            src={model.photo_url}
+            alt={model.name}
+            className="max-w-full max-h-full object-contain rounded-xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
 
