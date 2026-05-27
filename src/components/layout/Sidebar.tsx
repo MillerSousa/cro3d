@@ -19,7 +19,7 @@ const ALL_TABS: NavItem[] = [
   { id: 'insumos', label: 'Insumos', icon: Package },
   { id: 'mensagem', label: 'Mensagem', icon: MessageSquare },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-  { id: 'admin', label: 'Conta', icon: Settings },
+  { id: 'admin', label: 'Configurações', icon: Settings },
 ]
 
 interface SidebarProps {

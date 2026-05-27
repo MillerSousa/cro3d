@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { LoginScreen } from '@/components/auth/LoginScreen'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { HomeTab } from '@/components/tabs/HomeTab'
 import { CrochetTab } from '@/components/tabs/CrochetTab'
 import { ThreeDTab } from '@/components/tabs/ThreeDTab'
 import { InsumosTab } from '@/components/tabs/InsumosTab'
@@ -18,19 +19,20 @@ const DARK_KEY = 'cro3d_dark'
 const ACTIVE_TAB_KEY = 'cro3d_tab'
 
 const TAB_LABELS: Record<TabId, string> = {
+  home: 'Home',
   crochet: 'Crochê',
   '3d': 'Impressão 3D',
   insumos: 'Insumos',
   mensagem: 'Mensagem',
   dashboard: 'Dashboard',
-  admin: 'Conta',
+  admin: 'Configurações',
 }
 
 function AppContent() {
   const { user, allowedUser, loading } = useAuth()
   const role = allowedUser?.role
 
-  const [activeTab, setActiveTab] = useState<TabId>(() => (localStorage.getItem(ACTIVE_TAB_KEY) as TabId) || 'crochet')
+  const [activeTab, setActiveTab] = useState<TabId>(() => (localStorage.getItem(ACTIVE_TAB_KEY) as TabId) || 'home')
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem(DARK_KEY) === 'true')
   const [messagePrice, setMessagePrice] = useState<number | undefined>()
   const [dashboardPrefill, setDashboardPrefill] = useState<{
@@ -51,10 +53,8 @@ function AppContent() {
     if (!role) return
     const saved = localStorage.getItem(ACTIVE_TAB_KEY) as TabId | null
     if (saved) return
-    if (role === 'crochet') setActiveTab('crochet')
-    else if (role === '3d') setActiveTab('3d')
-    else if (role === 'admin') setActiveTab('dashboard')
-    else setActiveTab('crochet')
+    if (role === 'admin') setActiveTab('dashboard')
+    else setActiveTab('home')
   }, [role])
 
   // Spinner inicial (getSession ainda não resolveu)
@@ -120,6 +120,7 @@ function AppContent() {
 
   const renderTab = () => {
     switch (activeTab) {
+      case 'home': return <HomeTab onSelect={setActiveTab} />
       case 'crochet': return <CrochetTab onUsePrice={handleUsePrice} onSaveDashboard={handleSaveDashboardFromCrochet} />
       case '3d': return <ThreeDTab onUsePrice={handleUsePrice} onSaveDashboard={handleSaveDashboardFromThreeD} />
       case 'insumos': return <InsumosTab />
@@ -165,7 +166,7 @@ function AppContent() {
         </header>
 
         {/* Tab content */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-6 max-w-2xl md:max-w-none w-full mx-auto">
+        <main className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-6 max-w-2xl w-full mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

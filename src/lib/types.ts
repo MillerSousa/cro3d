@@ -57,7 +57,7 @@ export interface Printer {
   watts: number
 }
 
-export type TabId = 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin'
+export type TabId = 'home' | 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin'
 
 export interface CrochetCalcData {
   yarns: YarnInput[]
