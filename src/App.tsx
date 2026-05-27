@@ -82,13 +82,16 @@ function AppContent() {
   }
 
   function handleSaveDashboardFromCrochet(data: CrochetCalcData & { price: number }) {
+    const materialsCost = data.yarns.reduce((s, y) => s + (y.gramsUsed / y.gramsPerSkein) * y.skeinPrice, 0) / data.qty
+    const laborCost = ((data.timeHours + data.timeMinutes / 60) * data.hourlyRate) / data.qty
+    const extrasCost = data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0) / data.qty
     setDashboardPrefill({
       type: 'crochet',
       price: data.price,
       breakdown: {
-        materials_cost: data.yarns.reduce((s, y) => s + (y.gramsUsed / y.gramsPerSkein) * y.skeinPrice, 0) / data.qty,
-        labor_cost: ((data.timeHours + data.timeMinutes / 60) * data.hourlyRate) / data.qty,
-        subtotal: 0,
+        materials_cost: materialsCost,
+        labor_cost: laborCost,
+        subtotal: materialsCost + laborCost + extrasCost,
       },
     })
     setActiveTab('dashboard')

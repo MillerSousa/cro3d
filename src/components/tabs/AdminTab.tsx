@@ -53,20 +53,18 @@ export function AdminTab() {
   async function fetchStats() {
     setLoadingStats(true)
     const { data: models } = await supabase.from('dashboard_models').select('user_id')
-    const { data: allowedData } = await supabase.from('allowed_users').select('id, name, email')
+    const { data: allowedData } = await supabase.from('allowed_users').select('id, name, email, auth_user_id')
 
     if (models && allowedData) {
       const countMap: Record<string, number> = {}
       models.forEach(m => { countMap[m.user_id] = (countMap[m.user_id] || 0) + 1 })
 
-      // Map supabase auth user ids to allowed_users by email (requires join logic)
-      // Since we can't directly join auth.users, we get all dashboard_models with a count
       setStats({
         total: models.length,
-        byUser: allowedData.map(u => ({
-          name: u.name,
-          count: 0, // Can't directly map without auth user id lookup
-        })),
+        byUser: allowedData
+          .filter(u => u.auth_user_id)
+          .map(u => ({ name: u.name, count: countMap[u.auth_user_id!] || 0 }))
+          .sort((a, b) => b.count - a.count),
       })
     }
     setLoadingStats(false)

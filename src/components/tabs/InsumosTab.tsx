@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Pencil, Package, Check } from 'lucide-react'
+import { Plus, Trash2, Pencil, Package, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -223,11 +223,3 @@ export function InsumosTab() {
   )
 }
 
-// X icon helper (not imported above to avoid conflict)
-function X({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-    </svg>
-  )
-}

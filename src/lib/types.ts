@@ -5,6 +5,7 @@ export interface AllowedUser {
   email: string
   name: string
   role: UserRole
+  auth_user_id?: string | null
   created_at: string
 }
 

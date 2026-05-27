@@ -91,6 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           writeCache(null)
           toast.error('Acesso não autorizado. Fale com o administrador.')
         } else {
+          // Vincula o auth.uid ao allowed_users para permitir joins de estatísticas
+          if (!au.auth_user_id) {
+            await supabase.from('allowed_users')
+              .update({ auth_user_id: s.user.id })
+              .eq('email', s.user.email!)
+          }
           setSession(s); setUser(s.user); setAllowedUser(au)
           writeCache(au)
         }

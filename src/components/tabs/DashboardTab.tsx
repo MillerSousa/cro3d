@@ -402,7 +402,7 @@ function ModelForm({
       notes: notes || null, tips: tips || null,
       time_hours: timeHours || null, time_minutes: timeMinutes || null,
       photo_url: photoUrl || null,
-      cost_breakdown: prefillData?.breakdown || editModel?.cost_breakdown || null,
+      cost_breakdown: editModel ? (editModel.cost_breakdown ?? null) : (prefillData?.breakdown ?? null),
       updated_at: new Date().toISOString(),
     }
 
