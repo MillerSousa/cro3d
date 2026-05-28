@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn, formatCurrency } from '@/lib/utils'
-import { ExtraInput, Printer, ThreeDCalcData, Insumo, Filament, PrintPiece } from '@/lib/types'
+import { ExtraInput, Printer, ThreeDCalcData, Insumo, Filament, PrintPiece, CostBreakdown } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -28,9 +28,11 @@ function newPiece(): PrintPiece {
 interface ThreeDTabProps {
   onUsePrice: (price: number, productName?: string) => void
   onSaveDashboard: (data: ThreeDCalcData & { price: number }) => void
+  prefillData?: CostBreakdown | null
+  onPrefillConsumed?: () => void
 }
 
-export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
+export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillConsumed }: ThreeDTabProps) {
   const { user } = useAuth()
 
   // ── Impressoras ─────────────────────────────────────────────
@@ -77,6 +79,47 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
   }, [user])
 
   useEffect(() => { localStorage.setItem(KWH_KEY, kwh.toString()) }, [kwh])
+
+  // Restaurar calculadora a partir do snapshot do modelo
+  useEffect(() => {
+    if (!prefillData || prefillData.type !== '3d') return
+    if (prefillData.printer_id) setSelectedPrinterId(prefillData.printer_id)
+    const isMulti = prefillData.mode === 'multiple'
+    setMultiPieceMode(isMulti)
+    if (prefillData.kwh_price != null) setKwh(prefillData.kwh_price)
+    if (prefillData.margin_company != null) setCompanyMargin(prefillData.margin_company)
+    if (prefillData.margin_profit != null) setProfitMargin(prefillData.margin_profit)
+    if (prefillData.additional_costs && prefillData.additional_costs.length > 0) {
+      setExtras(prefillData.additional_costs.map(c => ({
+        id: genId(),
+        name: c.name,
+        qty: c.quantity,
+        unitPrice: c.unit_price,
+      })))
+      setShowExtras(true)
+    }
+    if (isMulti && prefillData.pieces && prefillData.pieces.length > 0) {
+      setPieces(prefillData.pieces.map(p => ({
+        id: genId(),
+        name: p.name,
+        gramsUsed: p.grams,
+        color: p.color,
+        filamentId: null,
+        filamentName: p.filament_name || undefined,
+        filamentPricePerKg: p.price_per_kg,
+        useGlobalPrice: false,
+        timeHours: p.time_hours || 0,
+        timeMinutes: p.time_minutes || 0,
+      })))
+    } else {
+      if (prefillData.time_hours != null) setTimeHours(prefillData.time_hours)
+      if (prefillData.time_minutes != null) setTimeMinutes(prefillData.time_minutes)
+      if (prefillData.filament_grams != null) setGramsUsed(prefillData.filament_grams)
+      if (prefillData.filament_price_per_kg != null) setFilamentPricePerKg(prefillData.filament_price_per_kg)
+    }
+    onPrefillConsumed?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillData])
 
   // ── Impressoras CRUD ─────────────────────────────────────────
   async function fetchPrinters() {
@@ -200,6 +243,10 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
     const totalPieceMinutes = multiPieceMode
       ? pieces.reduce((s, p) => s + p.timeHours * 60 + p.timeMinutes, 0)
       : timeHours * 60 + timeMinutes
+    const piecesWithNames = multiPieceMode ? pieces.map(p => ({
+      ...p,
+      filamentName: filaments.find(f => f.id === p.filamentId)?.name || p.filamentName || '',
+    })) : undefined
     onSaveDashboard({
       printer: selectedPrinter,
       timeHours: Math.floor(totalPieceMinutes / 60),
@@ -208,7 +255,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
       filamentPricePerKg: effectivePricePerKg,
       kwh, extras, companyMargin, profitMargin,
       price: suggestedPrice,
-      pieces: multiPieceMode ? pieces : undefined,
+      pieces: piecesWithNames,
     })
   }
 

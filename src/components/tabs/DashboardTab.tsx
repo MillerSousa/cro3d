@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Image as ImageIcon, ExternalLink, Pencil, Trash2,
   LayoutGrid, Youtube, BookOpen, ShoppingBag, Link2, X, Check,
-  Loader2, ChevronDown, ChevronUp,
+  Loader2, ChevronDown, ChevronUp, Hammer,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,7 @@ interface DashboardTabProps {
     breakdown: CostBreakdown
   } | null
   onUseModel?: (model: DashboardModel) => void
+  onFabricar?: (model: DashboardModel) => void
 }
 
 const STATUS_MAP = {
@@ -46,7 +47,7 @@ function ModelSkeleton() {
   )
 }
 
-export function DashboardTab({ prefillData, onUseModel }: DashboardTabProps) {
+export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardTabProps) {
   const { user, allowedUser } = useAuth()
   const role = allowedUser?.role
   const [models, setModels] = useState<DashboardModel[]>([])
@@ -168,6 +169,7 @@ export function DashboardTab({ prefillData, onUseModel }: DashboardTabProps) {
             onEdit={() => { setEditModel(selected); setShowForm(true); setSelected(null) }}
             onDelete={() => setConfirmDelete(selected.id)}
             onUseInCalc={() => { onUseModel?.(selected); setSelected(null) }}
+            onFabricar={() => { onFabricar?.(selected); setSelected(null) }}
             isOwner={selected.user_id === user?.id}
           />
         )}
@@ -200,12 +202,13 @@ export function DashboardTab({ prefillData, onUseModel }: DashboardTabProps) {
   )
 }
 
-function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwner }: {
+function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFabricar, isOwner }: {
   model: DashboardModel
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
   onUseInCalc: () => void
+  onFabricar: () => void
   isOwner: boolean
 }) {
   const [showPhoto, setShowPhoto] = useState(false)
@@ -300,6 +303,16 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, isOwn
 
       {/* Actions */}
       <div className="flex flex-col gap-2">
+        {model.type === 'crochet' && (
+          <Button
+            variant="outline"
+            onClick={onFabricar}
+            className="w-full gap-2 border-primary text-primary hover:bg-primary/10"
+          >
+            <Hammer className="h-4 w-4" />
+            Fabricar agora
+          </Button>
+        )}
         <Button onClick={onUseInCalc} className="w-full">
           Usar este modelo na calculadora
         </Button>
@@ -481,6 +494,7 @@ function ModelForm({
   const [timeHours, setTimeHours] = useState(editModel?.time_hours || 0)
   const [timeMinutes, setTimeMinutes] = useState(editModel?.time_minutes || 0)
   const [photoUrl, setPhotoUrl] = useState(editModel?.photo_url || '')
+  const [crochetRecipe, setCrochetRecipe] = useState(editModel?.crochet_recipe || '')
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -534,6 +548,9 @@ function ModelForm({
     setSaving(true)
 
     const breakdown: CostBreakdown | null = (baseCost > 0 || companyMargin > 0 || profitMargin > 0) ? {
+      // Preservar snapshot completo do prefill (para restaurar a calculadora)
+      ...(prefillBreakdown || {}),
+      // Sobrescrever campos de exibição com valores do formulário
       ...(type === 'crochet' && materialsCost > 0 ? { materials_cost: materialsCost } : {}),
       ...(type === 'crochet' && laborCost > 0 ? { labor_cost: laborCost } : {}),
       ...(type === '3d' && energyCost > 0 ? { energy_cost: energyCost } : {}),
@@ -551,6 +568,7 @@ function ModelForm({
       stl_link: stlLink || null, material_link: materialLink || null,
       youtube_link: youtubeLink || null, tutorial_link: tutorialLink || null,
       notes: notes || null, tips: tips || null,
+      crochet_recipe: type === 'crochet' ? (crochetRecipe || null) : null,
       time_hours: timeHours || null, time_minutes: timeMinutes || null,
       photo_url: photoUrl || null,
       cost_breakdown: breakdown,
@@ -803,6 +821,18 @@ function ModelForm({
           <Label className="text-xs">Dicas</Label>
           <Textarea value={tips} onChange={e => setTips(e.target.value)} className="mt-1 min-h-[60px]" />
         </div>
+
+        {type === 'crochet' && (
+          <div>
+            <Label className="text-xs">Receita</Label>
+            <Textarea
+              value={crochetRecipe}
+              onChange={e => setCrochetRecipe(e.target.value)}
+              placeholder="Descreva o passo a passo da receita..."
+              className="mt-1 min-h-[140px]"
+            />
+          </div>
+        )}
       </div>
       <DialogFooter className="px-6">
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>

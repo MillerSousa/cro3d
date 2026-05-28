@@ -25,6 +25,7 @@ export interface DashboardModel {
   tutorial_link: string | null
   notes: string | null
   tips: string | null
+  crochet_recipe: string | null
   time_hours: number | null
   time_minutes: number | null
   cost_breakdown: CostBreakdown | null
@@ -33,6 +34,7 @@ export interface DashboardModel {
 }
 
 export interface CostBreakdown {
+  // Valores computados para exibição
   materials_cost?: number
   labor_cost?: number
   energy_cost?: number
@@ -41,6 +43,25 @@ export interface CostBreakdown {
   subtotal?: number
   company_margin?: number
   profit_margin?: number
+  // Snapshot completo da calculadora para restauração
+  type?: 'crochet' | '3d'
+  // Crochê
+  yarns?: { name: string; price_per_skein: number; grams_per_skein: number; grams_used: number }[]
+  quantity?: number
+  time_hours?: number
+  time_minutes?: number
+  hourly_rate?: number
+  additional_costs?: { name: string; quantity: number; unit_price: number }[]
+  margin_company?: number
+  margin_profit?: number
+  // 3D
+  printer_id?: string
+  printer_name?: string
+  mode?: 'single' | 'multiple'
+  kwh_price?: number
+  filament_grams?: number
+  filament_price_per_kg?: number
+  pieces?: { name: string; grams: number; color: string; filament_name: string; price_per_kg: number; time_hours?: number; time_minutes?: number }[]
 }
 
 export interface Insumo {
@@ -82,6 +103,7 @@ export interface PrintPiece {
   gramsUsed: number
   color: string
   filamentId: string | null
+  filamentName?: string
   filamentPricePerKg: number
   useGlobalPrice: boolean
   timeHours: number

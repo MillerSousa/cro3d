@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Sun, Moon } from 'lucide-react'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { LoginScreen } from '@/components/auth/LoginScreen'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -13,6 +13,7 @@ import { InsumosTab } from '@/components/tabs/InsumosTab'
 import { MessageTab } from '@/components/tabs/MessageTab'
 import { DashboardTab } from '@/components/tabs/DashboardTab'
 import { AdminTab } from '@/components/tabs/AdminTab'
+import { FabricarPage } from '@/components/pages/FabricarPage'
 import { TabId, DashboardModel, CrochetCalcData, ThreeDCalcData, CostBreakdown } from '@/lib/types'
 
 const DARK_KEY = 'cro3d_dark'
@@ -38,6 +39,9 @@ function AppContent() {
   const [dashboardPrefill, setDashboardPrefill] = useState<{
     type: 'crochet' | '3d'; price: number; breakdown: CostBreakdown
   } | null>(null)
+  const [fabricarModel, setFabricarModel] = useState<DashboardModel | null>(null)
+  const [crochetPrefill, setCrochetPrefill] = useState<CostBreakdown | null>(null)
+  const [threeDPrefill, setThreeDPrefill] = useState<CostBreakdown | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -89,12 +93,23 @@ function AppContent() {
       type: 'crochet',
       price: data.price,
       breakdown: {
+        // Valores computados para exibição
         materials_cost: materialsCost,
         labor_cost: laborCost,
         extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: (e.qty * e.unitPrice) / data.qty })),
         subtotal: materialsCost + laborCost + extrasCost,
         company_margin: data.companyMargin,
         profit_margin: data.profitMargin,
+        // Snapshot completo para restaurar a calculadora
+        type: 'crochet',
+        yarns: data.yarns.map(y => ({ name: y.name, price_per_skein: y.skeinPrice, grams_per_skein: y.gramsPerSkein, grams_used: y.gramsUsed })),
+        quantity: data.qty,
+        time_hours: data.timeHours,
+        time_minutes: data.timeMinutes,
+        hourly_rate: data.hourlyRate,
+        additional_costs: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, quantity: e.qty, unit_price: e.unitPrice })),
+        margin_company: data.companyMargin,
+        margin_profit: data.profitMargin,
       },
     })
     setActiveTab('dashboard')
@@ -105,34 +120,101 @@ function AppContent() {
     const energy = ((data.printer?.wattage || 0) / 1000) * totalH * data.kwh
     const filament = (data.gramsUsed / 1000) * data.filamentPricePerKg
     const extrasCost = data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0)
+    const isMulti = !!(data.pieces && data.pieces.length > 0)
     setDashboardPrefill({
       type: '3d',
       price: data.price,
       breakdown: {
+        // Valores computados para exibição
         energy_cost: energy,
         filament_cost: filament,
         extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: e.qty * e.unitPrice })),
         subtotal: energy + filament + extrasCost,
         company_margin: data.companyMargin,
         profit_margin: data.profitMargin,
+        // Snapshot completo para restaurar a calculadora
+        type: '3d',
+        printer_id: data.printer?.id || '',
+        printer_name: data.printer?.name || '',
+        mode: isMulti ? 'multiple' : 'single',
+        time_hours: data.timeHours,
+        time_minutes: data.timeMinutes,
+        kwh_price: data.kwh,
+        filament_grams: data.gramsUsed,
+        filament_price_per_kg: data.filamentPricePerKg,
+        pieces: data.pieces?.map(p => ({
+          name: p.name,
+          grams: p.gramsUsed,
+          color: p.color,
+          filament_name: p.filamentName || '',
+          price_per_kg: p.filamentPricePerKg,
+          time_hours: p.timeHours,
+          time_minutes: p.timeMinutes,
+        })),
+        additional_costs: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, quantity: e.qty, unit_price: e.unitPrice })),
+        margin_company: data.companyMargin,
+        margin_profit: data.profitMargin,
       },
     })
     setActiveTab('dashboard')
   }
 
   function handleUseModel(model: DashboardModel) {
-    if (model.type === 'crochet') setActiveTab('crochet')
-    else setActiveTab('3d')
+    const cb = model.cost_breakdown
+    if (model.type === 'crochet') {
+      setActiveTab('crochet')
+      if (cb?.type === 'crochet') setCrochetPrefill(cb)
+    } else {
+      setActiveTab('3d')
+      if (cb?.type === '3d') setThreeDPrefill(cb)
+    }
+    setFabricarModel(null)
+    if (cb?.type) toast.success(`Calculadora preenchida com os dados de "${model.name}"`)
+  }
+
+  function handleFabricar(model: DashboardModel) {
+    setFabricarModel(model)
+  }
+
+  // Página "Fabricar agora" — renderiza sobre tudo quando ativa
+  if (fabricarModel) {
+    return (
+      <FabricarPage
+        model={fabricarModel}
+        onBack={() => setFabricarModel(null)}
+        onUseInCalc={handleUseModel}
+      />
+    )
   }
 
   const renderTab = () => {
     switch (activeTab) {
       case 'home': return <HomeTab onSelect={setActiveTab} />
-      case 'crochet': return <CrochetTab onUsePrice={handleUsePrice} onSaveDashboard={handleSaveDashboardFromCrochet} />
-      case '3d': return <ThreeDTab onUsePrice={handleUsePrice} onSaveDashboard={handleSaveDashboardFromThreeD} />
+      case 'crochet': return (
+        <CrochetTab
+          onUsePrice={handleUsePrice}
+          onSaveDashboard={handleSaveDashboardFromCrochet}
+          prefillData={crochetPrefill}
+          onPrefillConsumed={() => setCrochetPrefill(null)}
+        />
+      )
+      case '3d': return (
+        <ThreeDTab
+          onUsePrice={handleUsePrice}
+          onSaveDashboard={handleSaveDashboardFromThreeD}
+          prefillData={threeDPrefill}
+          onPrefillConsumed={() => setThreeDPrefill(null)}
+        />
+      )
       case 'insumos': return <InsumosTab />
       case 'mensagem': return <MessageTab prefillPrice={messagePrice} />
-      case 'dashboard': return <DashboardTab prefillData={dashboardPrefill} onUseModel={handleUseModel} />
+      case 'dashboard': return (
+        <DashboardTab
+          prefillData={dashboardPrefill}
+          onUseModel={handleUseModel}
+          onFabricar={handleFabricar}
+        />
+      )
       case 'admin': return <AdminTab />
     }
   }

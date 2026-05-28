@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { formatCurrency } from '@/lib/utils'
-import { YarnInput, ExtraInput, Insumo, CrochetCalcData } from '@/lib/types'
+import { YarnInput, ExtraInput, Insumo, CrochetCalcData, CostBreakdown } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -21,9 +21,11 @@ function newYarn(): YarnInput {
 interface CrochetTabProps {
   onUsePrice: (price: number, productName?: string) => void
   onSaveDashboard: (data: CrochetCalcData & { price: number }) => void
+  prefillData?: CostBreakdown | null
+  onPrefillConsumed?: () => void
 }
 
-export function CrochetTab({ onUsePrice, onSaveDashboard }: CrochetTabProps) {
+export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillConsumed }: CrochetTabProps) {
   const { user } = useAuth()
   const [yarns, setYarns] = useState<YarnInput[]>([newYarn()])
   const [qty, setQty] = useState(1)
@@ -43,6 +45,37 @@ export function CrochetTab({ onUsePrice, onSaveDashboard }: CrochetTabProps) {
       })
     }
   }, [user])
+
+  // Restaurar calculadora a partir do snapshot do modelo
+  useEffect(() => {
+    if (!prefillData || prefillData.type !== 'crochet') return
+    if (prefillData.yarns && prefillData.yarns.length > 0) {
+      setYarns(prefillData.yarns.map(y => ({
+        id: genId(),
+        name: y.name,
+        skeinPrice: y.price_per_skein,
+        gramsPerSkein: y.grams_per_skein,
+        gramsUsed: y.grams_used,
+      })))
+    }
+    if (prefillData.quantity != null) setQty(prefillData.quantity)
+    if (prefillData.time_hours != null) setTimeHours(prefillData.time_hours)
+    if (prefillData.time_minutes != null) setTimeMinutes(prefillData.time_minutes)
+    if (prefillData.hourly_rate != null) setHourlyRate(prefillData.hourly_rate)
+    if (prefillData.additional_costs && prefillData.additional_costs.length > 0) {
+      setExtras(prefillData.additional_costs.map(c => ({
+        id: genId(),
+        name: c.name,
+        qty: c.quantity,
+        unitPrice: c.unit_price,
+      })))
+      setShowExtras(true)
+    }
+    if (prefillData.margin_company != null) setCompanyMargin(prefillData.margin_company)
+    if (prefillData.margin_profit != null) setProfitMargin(prefillData.margin_profit)
+    onPrefillConsumed?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillData])
 
   const totalYarnCost = yarns.reduce((sum, y) => {
     if (!y.gramsPerSkein || !y.skeinPrice) return sum
