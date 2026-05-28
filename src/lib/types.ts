@@ -53,8 +53,37 @@ export interface Insumo {
 
 export interface Printer {
   id: string
+  user_id?: string
   name: string
-  watts: number
+  wattage: number
+  created_at?: string
+}
+
+export interface FilamentBrand {
+  id: string
+  name: string
+  website_url: string
+  logo_url?: string | null
+  created_at?: string
+}
+
+export interface Filament {
+  id: string
+  brand_id?: string | null
+  name: string
+  price_per_kg: number
+  created_at?: string
+  brand?: FilamentBrand | null
+}
+
+export interface PrintPiece {
+  id: string
+  name: string
+  gramsUsed: number
+  color: string
+  filamentId: string | null
+  filamentPricePerKg: number
+  useGlobalPrice: boolean
 }
 
 export type TabId = 'home' | 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin'
@@ -95,6 +124,7 @@ export interface ThreeDCalcData {
   extras: ExtraInput[]
   companyMargin: number
   profitMargin: number
+  pieces?: PrintPiece[]
 }
 
 export interface MessageData {

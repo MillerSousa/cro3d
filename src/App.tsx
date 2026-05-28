@@ -102,7 +102,7 @@ function AppContent() {
 
   function handleSaveDashboardFromThreeD(data: ThreeDCalcData & { price: number }) {
     const totalH = data.timeHours + data.timeMinutes / 60
-    const energy = ((data.printer?.watts || 0) / 1000) * totalH * data.kwh
+    const energy = ((data.printer?.wattage || 0) / 1000) * totalH * data.kwh
     const filament = (data.gramsUsed / 1000) * data.filamentPricePerKg
     const extrasCost = data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0)
     setDashboardPrefill({
