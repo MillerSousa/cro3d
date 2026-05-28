@@ -219,7 +219,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Materials */}
       {(model.materials || model.yarn_used || model.time_hours != null) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Materiais e produção</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Materiais e produção</h3>
           {model.yarn_used && <p className="text-sm"><span className="text-muted-foreground">Fio:</span> {model.yarn_used}</p>}
           {model.materials && <p className="text-sm"><span className="text-muted-foreground">Materiais:</span> {model.materials}</p>}
           {(model.time_hours != null || model.time_minutes != null) && (
@@ -242,9 +242,6 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
               {model.cost_breakdown.extras?.map((e, i) => (
                 <div key={i} className="flex justify-between"><span className="text-muted-foreground">{e.name || 'Extra'}</span><span>{formatCurrency(e.value)}</span></div>
               ))}
-              {model.cost_breakdown.subtotal != null && (
-                <div className="flex justify-between font-medium border-t border-border pt-1 mt-1"><span>Subtotal</span><span>{formatCurrency(model.cost_breakdown.subtotal)}</span></div>
-              )}
               {model.cost_breakdown.company_margin != null && (() => {
                 const sub = model.cost_breakdown!.subtotal || 0
                 const ca = sub * model.cost_breakdown!.company_margin! / 100
@@ -256,6 +253,9 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
                   )}
                 </>
               })()}
+              {model.cost_breakdown.subtotal != null && (
+                <div className="flex justify-between font-medium border-t border-border pt-1 mt-1"><span>Subtotal</span><span>{formatCurrency(model.cost_breakdown.subtotal)}</span></div>
+              )}
             </div>
           )}
         </div>
@@ -264,7 +264,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Links */}
       {(model.youtube_link || model.tutorial_link || model.material_link || model.stl_link) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Links úteis</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Links úteis</h3>
           <div className="flex flex-wrap gap-2">
             {model.youtube_link && (
               <a href={model.youtube_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
@@ -293,7 +293,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Notes */}
       {(model.notes || model.tips) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações / dicas</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Observações / dicas</h3>
           {model.notes && <p className="text-sm leading-relaxed whitespace-pre-wrap">{model.notes}</p>}
           {model.tips && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{model.tips}</p>}
         </div>
@@ -376,7 +376,12 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
           )}
 
           <div className="p-5 space-y-4 pb-10">
-            <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/15 text-primary">
+                Preço Sugerido
+              </span>
+            </div>
             {sharedContent}
           </div>
         </div>
@@ -423,7 +428,12 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
-                  <p className="text-2xl font-bold text-primary mt-1">{formatCurrency(model.price_per_unit)}</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/15 text-primary">
+                      Preço Sugerido
+                    </span>
+                  </div>
                 </div>
                 <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 mt-1">{STATUS_MAP[model.status].label}</Badge>
               </div>
