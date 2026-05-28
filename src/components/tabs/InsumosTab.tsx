@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Pencil, Package, Check, X } from 'lucide-react'
+import { Plus, Trash2, Pencil, Package, Check, X, BookMarked } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -112,10 +112,10 @@ export function InsumosTab() {
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-3"
+                  className="p-4 rounded-xl border border-border/60 space-y-3"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground uppercase">Insumo {idx + 1}</span>
+                    <span className="text-xs font-medium text-primary uppercase tracking-wide">Insumo {idx + 1}</span>
                     {cards.length > 1 && (
                       <button onClick={() => removeCard(card.id)} className="text-muted-foreground hover:text-destructive transition-colors">
                         <Trash2 className="h-4 w-4" />
@@ -136,7 +136,7 @@ export function InsumosTab() {
                           <button
                             key={s}
                             onClick={() => updateCard(card.id, 'name', s)}
-                            className="text-xs px-2 py-0.5 rounded-full border border-border hover:bg-muted transition-colors"
+                            className="text-xs px-2.5 py-1 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors"
                           >
                             {s}
                           </button>
@@ -178,7 +178,10 @@ export function InsumosTab() {
       {/* Catalog */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Catálogo salvo</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <BookMarked className="h-4 w-4" />
+            Catálogo salvo
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
