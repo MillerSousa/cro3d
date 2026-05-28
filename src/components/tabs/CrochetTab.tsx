@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, ChevronDown, ChevronUp, Scissors } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronUp, Scissors, Clock, Package, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -185,7 +185,10 @@ export function CrochetTab({ onUsePrice, onSaveDashboard }: CrochetTabProps) {
       {/* Production */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground font-medium">Produção</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Clock className="h-4 w-4" />
+            Produção
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
@@ -216,7 +219,10 @@ export function CrochetTab({ onUsePrice, onSaveDashboard }: CrochetTabProps) {
             className="flex items-center justify-between w-full"
             onClick={() => setShowExtras(p => !p)}
           >
-            <CardTitle className="text-sm text-muted-foreground font-medium">Custos adicionais</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Package className="h-4 w-4" />
+              Custos adicionais
+            </CardTitle>
             {showExtras ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </button>
         </CardHeader>
@@ -283,7 +289,10 @@ export function CrochetTab({ onUsePrice, onSaveDashboard }: CrochetTabProps) {
       {/* Margins */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground font-medium">Margens</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <TrendingUp className="h-4 w-4" />
+            Margens
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
           <div>
