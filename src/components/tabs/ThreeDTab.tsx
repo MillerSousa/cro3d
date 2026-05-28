@@ -22,7 +22,7 @@ function genId() { return Math.random().toString(36).slice(2) }
 const KWH_KEY = 'cro3d_kwh'
 
 function newPiece(): PrintPiece {
-  return { id: genId(), name: '', gramsUsed: 0, color: '', filamentId: null, filamentPricePerKg: 0, useGlobalPrice: true }
+  return { id: genId(), name: '', gramsUsed: 0, color: '', filamentId: null, filamentPricePerKg: 0, useGlobalPrice: true, timeHours: 0, timeMinutes: 0 }
 }
 
 interface ThreeDTabProps {
@@ -156,8 +156,16 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
     return piece.filamentPricePerKg
   }
 
-  function getPieceCost(piece: PrintPiece): number {
+  function getPieceFilamentCost(piece: PrintPiece): number {
     return (piece.gramsUsed / 1000) * getPieceEffectivePrice(piece)
+  }
+
+  function getPieceEnergyCost(piece: PrintPiece): number {
+    return ((selectedPrinter?.wattage || 0) / 1000) * (piece.timeHours + piece.timeMinutes / 60) * kwh
+  }
+
+  function getPieceCost(piece: PrintPiece): number {
+    return getPieceFilamentCost(piece) + getPieceEnergyCost(piece)
   }
 
   // ── Extras ───────────────────────────────────────────────────
@@ -170,9 +178,11 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
   // ── Cálculos ─────────────────────────────────────────────────
   const selectedPrinter = printers.find(p => p.id === selectedPrinterId) || null
   const totalHours = timeHours + timeMinutes / 60
-  const energyCost = ((selectedPrinter?.wattage || 0) / 1000) * totalHours * kwh
+  const energyCost = multiPieceMode
+    ? pieces.reduce((sum, p) => sum + getPieceEnergyCost(p), 0)
+    : ((selectedPrinter?.wattage || 0) / 1000) * totalHours * kwh
   const filamentCost = multiPieceMode
-    ? pieces.reduce((sum, p) => sum + getPieceCost(p), 0)
+    ? pieces.reduce((sum, p) => sum + getPieceFilamentCost(p), 0)
     : (gramsUsed / 1000) * filamentPricePerKg
   const extrasCost = extras.reduce((sum, e) => sum + e.qty * e.unitPrice, 0)
   const subtotal = energyCost + filamentCost + extrasCost
@@ -187,9 +197,13 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
     const effectivePricePerKg = (multiPieceMode && totalGrams > 0)
       ? (filamentCost * 1000) / totalGrams
       : filamentPricePerKg
+    const totalPieceMinutes = multiPieceMode
+      ? pieces.reduce((s, p) => s + p.timeHours * 60 + p.timeMinutes, 0)
+      : timeHours * 60 + timeMinutes
     onSaveDashboard({
       printer: selectedPrinter,
-      timeHours, timeMinutes,
+      timeHours: Math.floor(totalPieceMinutes / 60),
+      timeMinutes: totalPieceMinutes % 60,
       gramsUsed: totalGrams,
       filamentPricePerKg: effectivePricePerKg,
       kwh, extras, companyMargin, profitMargin,
@@ -289,17 +303,19 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
             </button>
           </div>
 
-          {/* Tempo — sempre visível */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Tempo — horas</Label>
-              <Input type="number" min="0" value={timeHours || ''} onChange={e => setTimeHours(parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
+          {/* Tempo — apenas no modo peça única */}
+          {!multiPieceMode && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Tempo — horas</Label>
+                <Input type="number" min="0" value={timeHours || ''} onChange={e => setTimeHours(parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Minutos</Label>
+                <Input type="number" min="0" max="59" value={timeMinutes || ''} onChange={e => setTimeMinutes(parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Minutos</Label>
-              <Input type="number" min="0" max="59" value={timeMinutes || ''} onChange={e => setTimeMinutes(parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
-            </div>
-          </div>
+          )}
 
           {/* Peça única */}
           {!multiPieceMode && (
@@ -354,6 +370,29 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
                           placeholder="Ex: Tampa, Corpo, Dobradiça"
                           className="mt-1"
                         />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs">Tempo — horas</Label>
+                          <Input
+                            type="number" min="0"
+                            value={piece.timeHours || ''}
+                            onChange={e => updatePiece(piece.id, 'timeHours', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Minutos</Label>
+                          <Input
+                            type="number" min="0" max="59"
+                            value={piece.timeMinutes || ''}
+                            onChange={e => updatePiece(piece.id, 'timeMinutes', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -592,37 +631,46 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard }: ThreeDTabProps) {
         <CardHeader><CardTitle className="text-primary">Resultado</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Energia elétrica</span>
-              <span>{formatCurrency(energyCost)}</span>
-            </div>
 
-            {/* Breakdown filamento */}
-            {multiPieceMode && pieces.some(p => p.gramsUsed > 0) ? (
+            {/* Breakdown por peça / filamento */}
+            {multiPieceMode ? (
               <div className="space-y-1">
-                {pieces.map(p => {
+                {pieces.map((p, idx) => {
                   const cost = getPieceCost(p)
                   const f = filaments.find(f => f.id === p.filamentId)
-                  if (!p.gramsUsed) return null
+                  const label = p.name || `Peça ${idx + 1}`
+                  const detail = [
+                    p.gramsUsed ? `${p.gramsUsed}g` : null,
+                    f ? f.name : null,
+                    (p.timeHours || p.timeMinutes)
+                      ? `${p.timeHours}h${p.timeMinutes > 0 ? `${p.timeMinutes}m` : ''}`
+                      : null,
+                  ].filter(Boolean).join(' · ')
                   return (
                     <div key={p.id} className="flex justify-between text-xs">
                       <span className="text-muted-foreground">
-                        {p.name || 'Peça'}{p.gramsUsed ? ` (${p.gramsUsed}g)` : ''}{f ? ` · ${f.name}` : ''}
+                        {label}{detail ? ` (${detail})` : ''}
                       </span>
                       <span>{formatCurrency(cost)}</span>
                     </div>
                   )
                 })}
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Total filamento</span>
-                  <span>{formatCurrency(filamentCost)}</span>
+                <div className="flex justify-between text-xs text-muted-foreground pt-0.5 border-t border-border/40">
+                  <span>Total peças (filamento + energia)</span>
+                  <span>{formatCurrency(filamentCost + energyCost)}</span>
                 </div>
               </div>
             ) : (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Filamento</span>
-                <span>{formatCurrency(filamentCost)}</span>
-              </div>
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Energia elétrica</span>
+                  <span>{formatCurrency(energyCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Filamento</span>
+                  <span>{formatCurrency(filamentCost)}</span>
+                </div>
+              </>
             )}
 
             {extrasCost > 0 && (

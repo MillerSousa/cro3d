@@ -84,6 +84,8 @@ export interface PrintPiece {
   filamentId: string | null
   filamentPricePerKg: number
   useGlobalPrice: boolean
+  timeHours: number
+  timeMinutes: number
 }
 
 export type TabId = 'home' | 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin'
