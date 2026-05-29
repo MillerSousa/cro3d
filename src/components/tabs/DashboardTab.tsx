@@ -79,6 +79,15 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
   }
 
   async function deleteModel(id: string) {
+    const model = models.find(m => m.id === id)
+    if (model?.photo_url) {
+      const marker = '/model-photos/'
+      const idx = model.photo_url.indexOf(marker)
+      if (idx !== -1) {
+        const path = model.photo_url.slice(idx + marker.length)
+        await supabase.storage.from('model-photos').remove([path])
+      }
+    }
     const { error } = await supabase.from('dashboard_models').delete().eq('id', id)
     if (error) { toast.error('Erro ao excluir'); return }
     setModels(p => p.filter(m => m.id !== id))
@@ -157,7 +166,7 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
                   <img
                     src={model.photo_url}
                     alt={model.name}
-                    className="absolute inset-0 w-full !h-full object-cover object-center block"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
                   />
                 ) : (
                   <div
@@ -755,6 +764,16 @@ function ModelForm({
       photo_url: photoUrl || null,
       cost_breakdown: breakdown,
       updated_at: new Date().toISOString(),
+    }
+
+    // Deletar foto antiga do Storage se foi substituída ou removida
+    if (editModel?.photo_url && editModel.photo_url !== photoUrl) {
+      const marker = '/model-photos/'
+      const idx = editModel.photo_url.indexOf(marker)
+      if (idx !== -1) {
+        const path = editModel.photo_url.slice(idx + marker.length)
+        await supabase.storage.from('model-photos').remove([path])
+      }
     }
 
     let error
