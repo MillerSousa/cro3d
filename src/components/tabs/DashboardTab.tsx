@@ -398,11 +398,20 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
           onClick={e => e.stopPropagation()}
           className="absolute inset-0 flex items-center justify-center p-4"
         >
-          <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-            {/* Foto fora do scroll — evita X ser cortado */}
-            <div className="relative shrink-0">
+          <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
+            {/* X fixo no canto do card — visível durante todo o scroll */}
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/55 hover:bg-black/75 transition-colors text-white backdrop-blur-sm shadow-lg"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Todo o conteúdo rolável — foto inclusa, igual ao mobile */}
+            <div className="overflow-y-auto flex-1 rounded-2xl">
               {model.photo_url ? (
-                <button onClick={() => setShowPhoto(true)} className="w-full block group" aria-label="Ver foto em tela cheia">
+                <button onClick={() => setShowPhoto(true)} className="w-full block group relative" aria-label="Ver foto em tela cheia">
                   <img src={model.photo_url} alt={model.name} className="w-full h-52 object-cover rounded-t-2xl" />
                   <div className="absolute inset-0 rounded-t-2xl flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/30 to-transparent">
                     <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">Clique para ampliar</span>
@@ -413,31 +422,22 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
                   <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
                 </div>
               )}
-              {/* X flutuante — fora do scroll, sem recorte */}
-              <button
-                onClick={onClose}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/55 hover:bg-black/75 transition-colors text-white backdrop-blur-sm shadow-lg"
-                aria-label="Fechar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
 
-            {/* Conteúdo rolável */}
-            <div className="overflow-y-auto flex-1 p-5 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
-                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/15 text-primary">
-                      Preço Sugerido
-                    </span>
+              <div className="p-5 space-y-4 pb-8">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold leading-tight">{model.name}</h2>
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <p className="text-2xl font-bold text-primary">{formatCurrency(model.price_per_unit)}</p>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/15 text-primary">
+                        Preço Sugerido
+                      </span>
+                    </div>
                   </div>
+                  <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 mt-1">{STATUS_MAP[model.status].label}</Badge>
                 </div>
-                <Badge variant={STATUS_MAP[model.status].variant} className="shrink-0 mt-1">{STATUS_MAP[model.status].label}</Badge>
+                {sharedContent}
               </div>
-              {sharedContent}
             </div>
           </div>
         </motion.div>
@@ -508,6 +508,12 @@ function ModelForm({
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
 
   // Breakdown / custos
   const [showCosts, setShowCosts] = useState(!!prefillBreakdown)
@@ -800,7 +806,13 @@ function ModelForm({
         {/* Materiais gerais */}
         <div>
           <Label className="text-xs">Materiais gerais</Label>
-          <Textarea value={materials} onChange={e => setMaterials(e.target.value)} placeholder="Descreva os materiais usados..." className="mt-1 min-h-[60px]" />
+          <Textarea
+            ref={el => autoGrow(el)}
+            value={materials}
+            onChange={e => { setMaterials(e.target.value); autoGrow(e.target) }}
+            placeholder="Descreva os materiais usados..."
+            className="mt-1 min-h-[60px] resize-none overflow-hidden"
+          />
         </div>
 
         {/* Tempo */}
@@ -825,21 +837,32 @@ function ModelForm({
 
         <div>
           <Label className="text-xs">Observações</Label>
-          <Textarea value={notes} onChange={e => setNotes(e.target.value)} className="mt-1 min-h-[60px]" />
+          <Textarea
+            ref={el => autoGrow(el)}
+            value={notes}
+            onChange={e => { setNotes(e.target.value); autoGrow(e.target) }}
+            className="mt-1 min-h-[60px] resize-none overflow-hidden"
+          />
         </div>
         <div>
           <Label className="text-xs">Dicas</Label>
-          <Textarea value={tips} onChange={e => setTips(e.target.value)} className="mt-1 min-h-[60px]" />
+          <Textarea
+            ref={el => autoGrow(el)}
+            value={tips}
+            onChange={e => { setTips(e.target.value); autoGrow(e.target) }}
+            className="mt-1 min-h-[60px] resize-none overflow-hidden"
+          />
         </div>
 
         {type === 'crochet' && (
           <div>
             <Label className="text-xs">Receita</Label>
             <Textarea
+              ref={el => autoGrow(el)}
               value={crochetRecipe}
-              onChange={e => setCrochetRecipe(e.target.value)}
+              onChange={e => { setCrochetRecipe(e.target.value); autoGrow(e.target) }}
               placeholder="Descreva o passo a passo da receita..."
-              className="mt-1 min-h-[140px]"
+              className="mt-1 min-h-[140px] resize-none overflow-hidden"
             />
           </div>
         )}
