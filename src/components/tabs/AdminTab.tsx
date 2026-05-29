@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Trash2, Loader2, Users, BarChart3, LogOut,
-  Pencil, Globe, Layers, ExternalLink,
+  Pencil, Globe, Layers, ExternalLink, Scissors,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AllowedUser, UserRole, FilamentBrand, Filament } from '@/lib/types'
+import { AllowedUser, UserRole, FilamentBrand, Filament, YarnBrand } from '@/lib/types'
 import { cn, formatCurrency } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -47,6 +47,7 @@ function BrandLogo({ name, logoUrl, className }: { name: string; logoUrl?: strin
 export function AdminTab() {
   const { allowedUser, signOut } = useAuth()
   const isAdmin = allowedUser?.role === 'admin'
+  const isCrochetUser = ['admin', 'crochet', 'both'].includes(allowedUser?.role || '')
 
   // ── Usuários ────────────────────────────────────────────────
   const [users, setUsers] = useState<AllowedUser[]>([])
@@ -84,6 +85,17 @@ export function AdminTab() {
   const [savingFilament, setSavingFilament] = useState(false)
   const [confirmDeleteFilament, setConfirmDeleteFilament] = useState<string | null>(null)
 
+  // ── Marcas de fio ────────────────────────────────────────────
+  const [yarnBrands, setYarnBrands] = useState<YarnBrand[]>([])
+  const [loadingYarnBrands, setLoadingYarnBrands] = useState(true)
+  const [showYarnBrandForm, setShowYarnBrandForm] = useState(false)
+  const [editYarnBrand, setEditYarnBrand] = useState<YarnBrand | null>(null)
+  const [yarnBrandName, setYarnBrandName] = useState('')
+  const [yarnBrandWebsite, setYarnBrandWebsite] = useState('')
+  const [yarnBrandLogo, setYarnBrandLogo] = useState('')
+  const [savingYarnBrand, setSavingYarnBrand] = useState(false)
+  const [confirmDeleteYarnBrand, setConfirmDeleteYarnBrand] = useState<string | null>(null)
+
   useEffect(() => {
     if (isAdmin) {
       fetchUsers()
@@ -92,6 +104,10 @@ export function AdminTab() {
       fetchFilaments()
     }
   }, [isAdmin])
+
+  useEffect(() => {
+    if (isCrochetUser) fetchYarnBrands()
+  }, [isCrochetUser])
 
   // ── Usuários ─────────────────────────────────────────────────
   async function fetchUsers() {
@@ -149,7 +165,7 @@ export function AdminTab() {
     toast.success('Usuário removido')
   }
 
-  // ── Marcas ───────────────────────────────────────────────────
+  // ── Marcas de filamento ──────────────────────────────────────
   async function fetchBrands() {
     setLoadingBrands(true)
     const { data } = await supabase.from('filament_brands').select('*').order('name')
@@ -159,13 +175,10 @@ export function AdminTab() {
 
   function openBrandForm(brand?: FilamentBrand) {
     if (brand) {
-      setEditBrand(brand)
-      setBrandName(brand.name)
-      setBrandWebsite(brand.website_url)
-      setBrandLogo(brand.logo_url || '')
+      setEditBrand(brand); setBrandName(brand.name)
+      setBrandWebsite(brand.website_url); setBrandLogo(brand.logo_url || '')
     } else {
-      setEditBrand(null)
-      setBrandName(''); setBrandWebsite(''); setBrandLogo('')
+      setEditBrand(null); setBrandName(''); setBrandWebsite(''); setBrandLogo('')
     }
     setShowBrandForm(true)
   }
@@ -178,8 +191,7 @@ export function AdminTab() {
     if (editBrand) {
       const { error } = await supabase.from('filament_brands').update(payload).eq('id', editBrand.id)
       if (error) { toast.error('Erro ao salvar marca'); setSavingBrand(false); return }
-      setBrands(p => p.map(b => b.id === editBrand.id ? { ...b, ...payload } : b)
-        .sort((a, b) => a.name.localeCompare(b.name)))
+      setBrands(p => p.map(b => b.id === editBrand.id ? { ...b, ...payload } : b).sort((a, b) => a.name.localeCompare(b.name)))
       toast.success('Marca atualizada')
     } else {
       const { data, error } = await supabase.from('filament_brands').insert(payload).select().single()
@@ -211,13 +223,10 @@ export function AdminTab() {
 
   function openFilamentForm(fil?: Filament) {
     if (fil) {
-      setEditFilament(fil)
-      setFilamentName(fil.name)
-      setFilamentBrandId(fil.brand_id || 'none')
-      setFilamentPrice(fil.price_per_kg)
+      setEditFilament(fil); setFilamentName(fil.name)
+      setFilamentBrandId(fil.brand_id || 'none'); setFilamentPrice(fil.price_per_kg)
     } else {
-      setEditFilament(null)
-      setFilamentName(''); setFilamentBrandId('none'); setFilamentPrice(0)
+      setEditFilament(null); setFilamentName(''); setFilamentBrandId('none'); setFilamentPrice(0)
     }
     setShowFilamentForm(true)
   }
@@ -250,6 +259,54 @@ export function AdminTab() {
     setFilaments(p => p.filter(f => f.id !== id))
     setConfirmDeleteFilament(null)
     toast.success('Filamento removido')
+  }
+
+  // ── Marcas de fio ────────────────────────────────────────────
+  async function fetchYarnBrands() {
+    setLoadingYarnBrands(true)
+    const { data } = await supabase.from('yarn_brands').select('*').order('name')
+    if (data) setYarnBrands(data as YarnBrand[])
+    setLoadingYarnBrands(false)
+  }
+
+  function openYarnBrandForm(brand?: YarnBrand) {
+    if (brand) {
+      setEditYarnBrand(brand); setYarnBrandName(brand.name)
+      setYarnBrandWebsite(brand.website_url || ''); setYarnBrandLogo(brand.logo_url || '')
+    } else {
+      setEditYarnBrand(null); setYarnBrandName(''); setYarnBrandWebsite(''); setYarnBrandLogo('')
+    }
+    setShowYarnBrandForm(true)
+  }
+
+  async function saveYarnBrand() {
+    if (!yarnBrandName.trim()) { toast.error('Nome é obrigatório'); return }
+    setSavingYarnBrand(true)
+    const payload = {
+      name: yarnBrandName.trim(),
+      website_url: yarnBrandWebsite.trim() || '',
+      logo_url: yarnBrandLogo.trim() || null,
+    }
+    if (editYarnBrand) {
+      const { error } = await supabase.from('yarn_brands').update(payload).eq('id', editYarnBrand.id)
+      if (error) { toast.error('Erro ao salvar marca'); setSavingYarnBrand(false); return }
+      setYarnBrands(p => p.map(b => b.id === editYarnBrand.id ? { ...b, ...payload } : b).sort((a, b) => a.name.localeCompare(b.name)))
+      toast.success('Marca atualizada')
+    } else {
+      const { data, error } = await supabase.from('yarn_brands').insert(payload).select().single()
+      if (error || !data) { toast.error('Erro ao salvar marca'); setSavingYarnBrand(false); return }
+      setYarnBrands(p => [...p, data as YarnBrand].sort((a, b) => a.name.localeCompare(b.name)))
+      toast.success('Marca adicionada')
+    }
+    setShowYarnBrandForm(false); setEditYarnBrand(null); setSavingYarnBrand(false)
+  }
+
+  async function deleteYarnBrand(id: string) {
+    const { error } = await supabase.from('yarn_brands').delete().eq('id', id)
+    if (error) { toast.error('Erro ao excluir marca'); return }
+    setYarnBrands(p => p.filter(b => b.id !== id))
+    setConfirmDeleteYarnBrand(null)
+    toast.success('Marca removida')
   }
 
   // ── Render ───────────────────────────────────────────────────
@@ -392,12 +449,8 @@ export function AdminTab() {
                     className="flex items-center gap-3 py-2.5 px-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
                     <BrandLogo name={brand.name} logoUrl={brand.logo_url} />
                     <div className="flex-1 min-w-0">
-                      <a
-                        href={brand.website_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1 w-fit"
-                      >
+                      <a href={brand.website_url} target="_blank" rel="noreferrer"
+                        className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1 w-fit">
                         {brand.name}
                         <ExternalLink className="h-3 w-3 text-muted-foreground" />
                       </a>
@@ -474,6 +527,61 @@ export function AdminTab() {
 
       </> /* end isAdmin */}
 
+      {/* Marcas de Fio — acessível para crochê, ambos e admin */}
+      {isCrochetUser && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Scissors className="h-4 w-4" /> Marcas de Fio
+              </CardTitle>
+              <Button size="sm" onClick={() => openYarnBrandForm()} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingYarnBrands ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            ) : yarnBrands.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca de fio cadastrada.</p>
+            ) : (
+              <div className="space-y-2">
+                {yarnBrands.map(brand => (
+                  <motion.div key={brand.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-3 py-2.5 px-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                    <BrandLogo name={brand.name} logoUrl={brand.logo_url} />
+                    <div className="flex-1 min-w-0">
+                      {brand.website_url ? (
+                        <a href={brand.website_url} target="_blank" rel="noreferrer"
+                          className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1 w-fit">
+                          {brand.name}
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </a>
+                      ) : (
+                        <span className="text-sm font-medium">{brand.name}</span>
+                      )}
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => openYarnBrandForm(brand)}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setConfirmDeleteYarnBrand(brand.id)}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Dialogs ─────────────────────────────────────────────── */}
 
       {/* Adicionar usuário */}
@@ -522,7 +630,7 @@ export function AdminTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Marca — form */}
+      {/* Marca de filamento — form */}
       <Dialog open={showBrandForm} onOpenChange={open => { setShowBrandForm(open); if (!open) setEditBrand(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>{editBrand ? 'Editar marca' : 'Adicionar marca'}</DialogTitle></DialogHeader>
@@ -538,6 +646,7 @@ export function AdminTab() {
             <div>
               <Label>URL da logo <span className="text-muted-foreground">(opcional)</span></Label>
               <Input type="url" value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://..." className="mt-1" />
+              {brandLogo && <img src={brandLogo} alt="" className="mt-2 w-10 h-10 rounded-lg object-cover" onError={e => (e.currentTarget.style.display = 'none')} />}
             </div>
           </div>
           <DialogFooter className="px-6">
@@ -549,7 +658,7 @@ export function AdminTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Marca — confirmar exclusão */}
+      {/* Marca de filamento — confirmar exclusão */}
       <Dialog open={!!confirmDeleteBrand} onOpenChange={v => !v && setConfirmDeleteBrand(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Remover marca?</DialogTitle></DialogHeader>
@@ -584,13 +693,7 @@ export function AdminTab() {
             </div>
             <div>
               <Label>Preço por kg (R$)</Label>
-              <Input
-                type="number" min="0" step="0.01"
-                value={filamentPrice || ''}
-                onChange={e => setFilamentPrice(parseFloat(e.target.value) || 0)}
-                placeholder="85,40"
-                className="mt-1"
-              />
+              <Input type="number" min="0" step="0.01" value={filamentPrice || ''} onChange={e => setFilamentPrice(parseFloat(e.target.value) || 0)} placeholder="85,40" className="mt-1" />
             </div>
           </div>
           <DialogFooter className="px-6">
@@ -610,6 +713,46 @@ export function AdminTab() {
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteFilament(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={() => confirmDeleteFilament && deleteFilament(confirmDeleteFilament)}>Remover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Marca de fio — form */}
+      <Dialog open={showYarnBrandForm} onOpenChange={open => { setShowYarnBrandForm(open); if (!open) setEditYarnBrand(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{editYarnBrand ? 'Editar marca de fio' : 'Adicionar marca de fio'}</DialogTitle></DialogHeader>
+          <div className="space-y-3 px-6">
+            <div>
+              <Label>Nome da marca</Label>
+              <Input value={yarnBrandName} onChange={e => setYarnBrandName(e.target.value)} placeholder="Ex: Circulo, Pingouin" className="mt-1" />
+            </div>
+            <div>
+              <Label>URL do site <span className="text-muted-foreground">(opcional)</span></Label>
+              <Input type="url" value={yarnBrandWebsite} onChange={e => setYarnBrandWebsite(e.target.value)} placeholder="https://..." className="mt-1" />
+            </div>
+            <div>
+              <Label>URL da logo <span className="text-muted-foreground">(opcional — link direto da foto)</span></Label>
+              <Input type="url" value={yarnBrandLogo} onChange={e => setYarnBrandLogo(e.target.value)} placeholder="https://..." className="mt-1" />
+              {yarnBrandLogo && <img src={yarnBrandLogo} alt="" className="mt-2 w-10 h-10 rounded-lg object-cover" onError={e => (e.currentTarget.style.display = 'none')} />}
+            </div>
+          </div>
+          <DialogFooter className="px-6">
+            <Button variant="outline" onClick={() => setShowYarnBrandForm(false)}>Cancelar</Button>
+            <Button onClick={saveYarnBrand} disabled={savingYarnBrand} className="gap-2">
+              {savingYarnBrand && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Marca de fio — confirmar exclusão */}
+      <Dialog open={!!confirmDeleteYarnBrand} onOpenChange={v => !v && setConfirmDeleteYarnBrand(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Remover marca de fio?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground px-6">Esta ação não pode ser desfeita.</p>
+          <DialogFooter className="px-6">
+            <Button variant="outline" onClick={() => setConfirmDeleteYarnBrand(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDeleteYarnBrand && deleteYarnBrand(confirmDeleteYarnBrand)}>Remover</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

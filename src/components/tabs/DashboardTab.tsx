@@ -225,6 +225,45 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
           {(model.time_hours != null || model.time_minutes != null) && (
             <p className="text-sm"><span className="text-muted-foreground">Tempo:</span> {formatTime(model.time_hours || 0, model.time_minutes || 0)}</p>
           )}
+          {/* Fios / filamentos com marca e modelo */}
+          {model.type === 'crochet' && model.cost_breakdown?.yarns && model.cost_breakdown.yarns.some(y => y.brand_name || y.model_name) && (
+            <div className="space-y-1.5">
+              {model.cost_breakdown.yarns.map((y, i) => (y.brand_name || y.model_name) ? (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  {y.brand_name && <span className="font-medium text-primary">{y.brand_name}</span>}
+                  {y.model_name && <span className="text-muted-foreground">{y.model_name}</span>}
+                  {y.name && <span className="text-muted-foreground text-xs">· {y.name}</span>}
+                </div>
+              ) : null)}
+            </div>
+          )}
+          {model.type === '3d' && model.cost_breakdown && (() => {
+            const cb = model.cost_breakdown!
+            const hasInfo = (cb.pieces && cb.pieces.some(p => p.brand_name || p.filament_model_name))
+              || cb.single_brand_name || cb.single_filament_model_name
+            if (!hasInfo) return null
+            if (cb.mode === 'multiple' && cb.pieces) {
+              return (
+                <div className="space-y-1.5">
+                  {cb.pieces.map((p, i) => (p.brand_name || p.filament_model_name) ? (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      {p.brand_name && <span className="font-medium text-primary">{p.brand_name}</span>}
+                      {p.filament_model_name && <span className="text-muted-foreground">{p.filament_model_name}</span>}
+                      {p.name && <span className="text-muted-foreground text-xs">· {p.name}</span>}
+                    </div>
+                  ) : null)}
+                </div>
+              )
+            }
+            return (
+              <div className="flex items-center gap-2 text-sm">
+                {cb.single_brand_name && <span className="font-medium text-primary">{cb.single_brand_name}</span>}
+                {cb.single_filament_model_name && <span className="text-muted-foreground">{cb.single_filament_model_name}</span>}
+                {cb.single_filament_name && <span className="text-muted-foreground text-xs">· {cb.single_filament_name}</span>}
+              </div>
+            )
+          })()}
+
           {model.cost_breakdown && (
             <div className="bg-muted/40 rounded-xl p-3 text-xs space-y-1">
               {model.cost_breakdown.materials_cost != null && (

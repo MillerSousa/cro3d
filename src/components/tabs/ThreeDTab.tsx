@@ -22,7 +22,19 @@ function genId() { return Math.random().toString(36).slice(2) }
 const KWH_KEY = 'cro3d_kwh'
 
 function newPiece(): PrintPiece {
-  return { id: genId(), name: '', gramsUsed: 0, color: '', filamentId: null, filamentPricePerKg: 0, useGlobalPrice: true, timeHours: 0, timeMinutes: 0 }
+  return { id: genId(), name: '', gramsUsed: 0, color: '', filamentId: null, filamentBrandName: undefined, filamentModelName: '', filamentPricePerKg: 0, useGlobalPrice: true, timeHours: 0, timeMinutes: 0 }
+}
+
+function BrandLogo({ name, logoUrl, className }: { name: string; logoUrl?: string | null; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (!logoUrl || failed) {
+    return (
+      <div className={cn('rounded-lg bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0', className || 'w-6 h-6')}>
+        {name.charAt(0).toUpperCase()}
+      </div>
+    )
+  }
+  return <img src={logoUrl} alt={name} className={cn('rounded-lg object-cover shrink-0', className || 'w-6 h-6')} onError={() => setFailed(true)} />
 }
 
 interface ThreeDTabProps {
@@ -56,6 +68,9 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
   const [timeMinutes, setTimeMinutes] = useState(0)
   const [gramsUsed, setGramsUsed] = useState(0)
   const [filamentPricePerKg, setFilamentPricePerKg] = useState(0)
+  const [singleFilamentId, setSingleFilamentId] = useState<string | null>(null)
+  const [singleFilamentModelName, setSingleFilamentModelName] = useState('')
+  const [singleUseGlobalPrice, setSingleUseGlobalPrice] = useState(true)
 
   // ── Peças (múltiplas) ────────────────────────────────────────
   const [pieces, setPieces] = useState<PrintPiece[]>([newPiece()])
@@ -116,6 +131,8 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
       if (prefillData.time_minutes != null) setTimeMinutes(prefillData.time_minutes)
       if (prefillData.filament_grams != null) setGramsUsed(prefillData.filament_grams)
       if (prefillData.filament_price_per_kg != null) setFilamentPricePerKg(prefillData.filament_price_per_kg)
+      if (prefillData.singleFilamentId !== undefined) setSingleFilamentId(prefillData.singleFilamentId || null)
+      if (prefillData.single_filament_model_name) setSingleFilamentModelName(prefillData.single_filament_model_name)
     }
     onPrefillConsumed?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,13 +237,17 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
 
   // ── Cálculos ─────────────────────────────────────────────────
   const selectedPrinter = printers.find(p => p.id === selectedPrinterId) || null
+  const singleFilament = filaments.find(f => f.id === singleFilamentId) || null
+  const effectiveSinglePrice = (singleFilamentId && singleUseGlobalPrice)
+    ? (singleFilament?.price_per_kg || 0)
+    : filamentPricePerKg
   const totalHours = timeHours + timeMinutes / 60
   const energyCost = multiPieceMode
     ? pieces.reduce((sum, p) => sum + getPieceEnergyCost(p), 0)
     : ((selectedPrinter?.wattage || 0) / 1000) * totalHours * kwh
   const filamentCost = multiPieceMode
     ? pieces.reduce((sum, p) => sum + getPieceFilamentCost(p), 0)
-    : (gramsUsed / 1000) * filamentPricePerKg
+    : (gramsUsed / 1000) * effectiveSinglePrice
   const extrasCost = extras.reduce((sum, e) => sum + e.qty * e.unitPrice, 0)
   const subtotal = energyCost + filamentCost + extrasCost
   const companyAdd = subtotal * (companyMargin / 100)
@@ -243,10 +264,14 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
     const totalPieceMinutes = multiPieceMode
       ? pieces.reduce((s, p) => s + p.timeHours * 60 + p.timeMinutes, 0)
       : timeHours * 60 + timeMinutes
-    const piecesWithNames = multiPieceMode ? pieces.map(p => ({
-      ...p,
-      filamentName: filaments.find(f => f.id === p.filamentId)?.name || p.filamentName || '',
-    })) : undefined
+    const piecesWithNames = multiPieceMode ? pieces.map(p => {
+      const fil = filaments.find(f => f.id === p.filamentId)
+      return {
+        ...p,
+        filamentName: fil?.name || p.filamentName || '',
+        filamentBrandName: fil?.brand?.name || p.filamentBrandName || '',
+      }
+    }) : undefined
     onSaveDashboard({
       printer: selectedPrinter,
       timeHours: Math.floor(totalPieceMinutes / 60),
@@ -256,6 +281,10 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
       kwh, extras, companyMargin, profitMargin,
       price: suggestedPrice,
       pieces: piecesWithNames,
+      singleFilamentId,
+      singleFilamentName: singleFilament?.name || '',
+      singleFilamentBrandName: singleFilament?.brand?.name || '',
+      singleFilamentModelName,
     })
   }
 
@@ -366,15 +395,92 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
 
           {/* Peça única */}
           {!multiPieceMode && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3">
+              {/* Filamento */}
+              <div>
+                <Label className="text-xs">Filamento utilizado</Label>
+                <Select
+                  value={singleFilamentId || 'none'}
+                  onValueChange={v => {
+                    const id = v === 'none' ? null : v
+                    setSingleFilamentId(id)
+                    setSingleUseGlobalPrice(!!id)
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecionar filamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem filamento</SelectItem>
+                    {filaments.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}{f.brand ? ` — ${f.brand.name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Exibição da marca selecionada */}
+              {singleFilamentId && singleFilament?.brand && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40">
+                  <BrandLogo name={singleFilament.brand.name} logoUrl={singleFilament.brand.logo_url} className="w-7 h-7" />
+                  <span className="text-xs font-medium">{singleFilament.brand.name}</span>
+                </div>
+              )}
+
+              {/* Modelo do filamento */}
+              <div>
+                <Label className="text-xs">Modelo do filamento</Label>
+                <Input
+                  value={singleFilamentModelName}
+                  onChange={e => setSingleFilamentModelName(e.target.value)}
+                  placeholder="Ex: PLA High Speed, PETG Basic"
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Gramas */}
               <div>
                 <Label className="text-xs">Gramas de filamento</Label>
                 <Input type="number" min="0" value={gramsUsed || ''} onChange={e => setGramsUsed(parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
               </div>
-              <div>
-                <Label className="text-xs">Filamento (R$/kg)</Label>
-                <Input type="number" min="0" step="0.01" value={filamentPricePerKg || ''} onChange={e => setFilamentPricePerKg(parseFloat(e.target.value) || 0)} placeholder="120,00" className="mt-1" />
-              </div>
+
+              {/* Toggle preço global */}
+              {singleFilamentId && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setSingleUseGlobalPrice(p => !p)}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <div className={cn('w-8 h-4 rounded-full transition-colors relative shrink-0', singleUseGlobalPrice ? 'bg-primary' : 'bg-muted-foreground/30')}>
+                      <div className={cn('w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform', singleUseGlobalPrice ? 'translate-x-4' : 'translate-x-0.5')} />
+                    </div>
+                    <span className="text-muted-foreground">Usar preço do filamento cadastrado</span>
+                  </button>
+                  {singleUseGlobalPrice ? (
+                    singleFilament && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/40 text-xs">
+                        <span className="text-muted-foreground">Preço/kg (cadastrado)</span>
+                        <span className="font-medium text-primary">{formatCurrency(singleFilament.price_per_kg)}</span>
+                      </div>
+                    )
+                  ) : (
+                    <div>
+                      <Label className="text-xs">Preço/kg personalizado (R$)</Label>
+                      <Input type="number" min="0" step="0.01" value={filamentPricePerKg || ''} onChange={e => setFilamentPricePerKg(parseFloat(e.target.value) || 0)} placeholder="120,00" className="mt-1" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Preço manual quando sem filamento selecionado */}
+              {!singleFilamentId && (
+                <div>
+                  <Label className="text-xs">Filamento (R$/kg)</Label>
+                  <Input type="number" min="0" step="0.01" value={filamentPricePerKg || ''} onChange={e => setFilamentPricePerKg(parseFloat(e.target.value) || 0)} placeholder="120,00" className="mt-1" />
+                </div>
+              )}
             </div>
           )}
 
@@ -464,6 +570,17 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
                         </div>
                       </div>
 
+                      {/* Modelo do filamento */}
+                      <div>
+                        <Label className="text-xs">Modelo do filamento</Label>
+                        <Input
+                          value={piece.filamentModelName || ''}
+                          onChange={e => updatePiece(piece.id, 'filamentModelName', e.target.value)}
+                          placeholder="Ex: PLA High Speed, PETG Basic"
+                          className="mt-1"
+                        />
+                      </div>
+
                       <div>
                         <Label className="text-xs">Filamento utilizado</Label>
                         <Select
@@ -482,6 +599,12 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
                             ))}
                           </SelectContent>
                         </Select>
+                        {selectedFilament?.brand && (
+                          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-muted/40">
+                            <BrandLogo name={selectedFilament.brand.name} logoUrl={selectedFilament.brand.logo_url} className="w-6 h-6" />
+                            <span className="text-xs font-medium">{selectedFilament.brand.name}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Toggle preço global */}

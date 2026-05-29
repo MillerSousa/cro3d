@@ -46,7 +46,7 @@ export interface CostBreakdown {
   // Snapshot completo da calculadora para restauração
   type?: 'crochet' | '3d'
   // Crochê
-  yarns?: { name: string; price_per_skein: number; grams_per_skein: number; grams_used: number }[]
+  yarns?: { name: string; model_name?: string; brand_name?: string; price_per_skein: number; grams_per_skein: number; grams_used: number }[]
   quantity?: number
   time_hours?: number
   time_minutes?: number
@@ -61,7 +61,12 @@ export interface CostBreakdown {
   kwh_price?: number
   filament_grams?: number
   filament_price_per_kg?: number
-  pieces?: { name: string; grams: number; color: string; filament_name: string; price_per_kg: number; time_hours?: number; time_minutes?: number }[]
+  pieces?: { name: string; grams: number; color: string; filament_name: string; brand_name?: string; filament_model_name?: string; price_per_kg: number; time_hours?: number; time_minutes?: number }[]
+  // Single-piece 3D
+  singleFilamentId?: string | null
+  single_filament_name?: string
+  single_brand_name?: string
+  single_filament_model_name?: string
 }
 
 export interface Insumo {
@@ -88,6 +93,14 @@ export interface FilamentBrand {
   created_at?: string
 }
 
+export interface YarnBrand {
+  id: string
+  name: string
+  website_url: string
+  logo_url?: string | null
+  created_at?: string
+}
+
 export interface Filament {
   id: string
   brand_id?: string | null
@@ -104,6 +117,8 @@ export interface PrintPiece {
   color: string
   filamentId: string | null
   filamentName?: string
+  filamentBrandName?: string
+  filamentModelName?: string
   filamentPricePerKg: number
   useGlobalPrice: boolean
   timeHours: number
@@ -126,6 +141,9 @@ export interface CrochetCalcData {
 export interface YarnInput {
   id: string
   name: string
+  modelName: string
+  brandId: string | null
+  brandName?: string
   skeinPrice: number
   gramsPerSkein: number
   gramsUsed: number
@@ -149,6 +167,11 @@ export interface ThreeDCalcData {
   companyMargin: number
   profitMargin: number
   pieces?: PrintPiece[]
+  // Single-piece filament info
+  singleFilamentId?: string | null
+  singleFilamentName?: string
+  singleFilamentBrandName?: string
+  singleFilamentModelName?: string
 }
 
 export interface MessageData {

@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { formatCurrency } from '@/lib/utils'
-import { YarnInput, ExtraInput, Insumo, CrochetCalcData, CostBreakdown } from '@/lib/types'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { formatCurrency, cn } from '@/lib/utils'
+import { YarnInput, ExtraInput, Insumo, CrochetCalcData, CostBreakdown, YarnBrand } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -15,7 +16,19 @@ import { toast } from 'sonner'
 function genId() { return Math.random().toString(36).slice(2) }
 
 function newYarn(): YarnInput {
-  return { id: genId(), name: '', skeinPrice: 0, gramsPerSkein: 0, gramsUsed: 0 }
+  return { id: genId(), name: '', modelName: '', brandId: null, brandName: undefined, skeinPrice: 0, gramsPerSkein: 0, gramsUsed: 0 }
+}
+
+function BrandLogo({ name, logoUrl, className }: { name: string; logoUrl?: string | null; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (!logoUrl || failed) {
+    return (
+      <div className={cn('rounded-lg bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0', className || 'w-6 h-6')}>
+        {name.charAt(0).toUpperCase()}
+      </div>
+    )
+  }
+  return <img src={logoUrl} alt={name} className={cn('rounded-lg object-cover shrink-0', className || 'w-6 h-6')} onError={() => setFailed(true)} />
 }
 
 interface CrochetTabProps {
@@ -37,11 +50,15 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
   const [extras, setExtras] = useState<ExtraInput[]>([])
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [showExtras, setShowExtras] = useState(false)
+  const [yarnBrands, setYarnBrands] = useState<YarnBrand[]>([])
 
   useEffect(() => {
     if (user) {
       supabase.from('insumos').select('*').eq('user_id', user.id).then(({ data }) => {
         if (data) setInsumos(data as Insumo[])
+      })
+      supabase.from('yarn_brands').select('*').order('name').then(({ data }) => {
+        if (data) setYarnBrands(data as YarnBrand[])
       })
     }
   }, [user])
@@ -53,6 +70,9 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
       setYarns(prefillData.yarns.map(y => ({
         id: genId(),
         name: y.name,
+        modelName: y.model_name || '',
+        brandId: null,
+        brandName: y.brand_name || undefined,
         skeinPrice: y.price_per_skein,
         gramsPerSkein: y.grams_per_skein,
         gramsUsed: y.grams_used,
@@ -64,10 +84,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
     if (prefillData.hourly_rate != null) setHourlyRate(prefillData.hourly_rate)
     if (prefillData.additional_costs && prefillData.additional_costs.length > 0) {
       setExtras(prefillData.additional_costs.map(c => ({
-        id: genId(),
-        name: c.name,
-        qty: c.quantity,
-        unitPrice: c.unit_price,
+        id: genId(), name: c.name, qty: c.quantity, unitPrice: c.unit_price,
       })))
       setShowExtras(true)
     }
@@ -84,9 +101,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
 
   const totalTimeHours = timeHours + timeMinutes / 60
   const laborCost = (totalTimeHours * hourlyRate) / (qty || 1)
-
   const extrasCostPerUnit = extras.reduce((sum, e) => sum + (e.qty * e.unitPrice) / (qty || 1), 0)
-
   const materialCostPerUnit = totalYarnCost / (qty || 1)
   const subtotal = materialCostPerUnit + laborCost + extrasCostPerUnit
   const companyAdd = subtotal * (companyMargin / 100)
@@ -95,23 +110,28 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
 
   function addYarn() { setYarns(p => [...p, newYarn()]) }
   function removeYarn(id: string) { setYarns(p => p.filter(y => y.id !== id)) }
-  function updateYarn(id: string, field: keyof YarnInput, value: string | number) {
+  function updateYarn(id: string, field: keyof YarnInput, value: string | number | null | undefined) {
     setYarns(p => p.map(y => y.id === id ? { ...y, [field]: value } : y))
   }
 
-  function addExtra() {
-    setExtras(p => [...p, { id: genId(), name: '', qty: 1, unitPrice: 0 }])
-    setShowExtras(true)
+  function handleBrandChange(yarnId: string, brandId: string) {
+    if (brandId === 'none') {
+      updateYarn(yarnId, 'brandId', null)
+      updateYarn(yarnId, 'brandName', undefined)
+    } else {
+      const brand = yarnBrands.find(b => b.id === brandId)
+      updateYarn(yarnId, 'brandId', brandId)
+      updateYarn(yarnId, 'brandName', brand?.name)
+    }
   }
+
+  function addExtra() { setExtras(p => [...p, { id: genId(), name: '', qty: 1, unitPrice: 0 }]); setShowExtras(true) }
   function removeExtra(id: string) { setExtras(p => p.filter(e => e.id !== id)) }
   function updateExtra(id: string, field: keyof ExtraInput, value: string | number) {
     setExtras(p => p.map(e => e.id === id ? { ...e, [field]: value } : e))
   }
 
-  function handleUsePrice() {
-    onUsePrice(suggestedPrice)
-    toast.success('Preço adicionado à mensagem!')
-  }
+  function handleUsePrice() { onUsePrice(suggestedPrice); toast.success('Preço adicionado à mensagem!') }
 
   function handleSaveDashboard() {
     const data: CrochetCalcData & { price: number } = {
@@ -140,74 +160,95 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
         </CardHeader>
         <CardContent className="space-y-4">
           <AnimatePresence>
-            {yarns.map((yarn, idx) => (
-              <motion.div
-                key={yarn.id}
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="space-y-3 p-4 rounded-xl bg-muted/40 border border-border/50"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Fio {idx + 1}
-                  </span>
-                  {yarns.length > 1 && (
-                    <button onClick={() => removeYarn(yarn.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+            {yarns.map((yarn, idx) => {
+              const selectedBrand = yarnBrands.find(b => b.id === yarn.brandId)
+              return (
+                <motion.div
+                  key={yarn.id}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="space-y-3 p-4 rounded-xl bg-muted/40 border border-border/50"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-primary uppercase tracking-wide">Fio {idx + 1}</span>
+                    {yarns.length > 1 && (
+                      <button onClick={() => removeYarn(yarn.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Nome do fio */}
+                  <div>
+                    <Label className="text-xs">Nome do fio</Label>
+                    <Input placeholder="Ex: Fio 100% algodão bege" value={yarn.name} onChange={e => updateYarn(yarn.id, 'name', e.target.value)} className="mt-1" />
+                  </div>
+
+                  {/* Marca */}
+                  <div>
+                    <Label className="text-xs">Marca</Label>
+                    <Select value={yarn.brandId || 'none'} onValueChange={v => handleBrandChange(yarn.id, v)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Selecionar marca" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem marca</SelectItem>
+                        {yarnBrands.map(b => (
+                          <SelectItem key={b.id} value={b.id}>
+                            <div className="flex items-center gap-2">
+                              <BrandLogo name={b.name} logoUrl={b.logo_url} className="w-4 h-4" />
+                              {b.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedBrand && (
+                      <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-muted/60">
+                        <BrandLogo name={selectedBrand.name} logoUrl={selectedBrand.logo_url} className="w-7 h-7" />
+                        <span className="text-xs font-medium">{selectedBrand.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modelo do fio */}
+                  <div>
+                    <Label className="text-xs">Modelo do fio</Label>
+                    <Input
+                      placeholder="Ex: Barroco 6, Encanto, Anne"
+                      value={yarn.modelName}
+                      onChange={e => updateYarn(yarn.id, 'modelName', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Preço + gramas */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-xs">Preço (R$)</Label>
+                      <Input type="number" min="0" step="0.01" value={yarn.skeinPrice || ''} onChange={e => updateYarn(yarn.id, 'skeinPrice', parseFloat(e.target.value) || 0)} placeholder="0,00" className="mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">g/novelo</Label>
+                      <Input type="number" min="1" value={yarn.gramsPerSkein || ''} onChange={e => updateYarn(yarn.id, 'gramsPerSkein', parseFloat(e.target.value) || 1)} placeholder="100" className="mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">g usadas</Label>
+                      <Input type="number" min="0" value={yarn.gramsUsed || ''} onChange={e => updateYarn(yarn.id, 'gramsUsed', parseFloat(e.target.value) || 0)} placeholder="0" className="mt-1" />
+                    </div>
+                  </div>
+
+                  {yarn.skeinPrice > 0 && yarn.gramsUsed > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Custo deste fio: <span className="text-primary font-medium">
+                        {formatCurrency((yarn.gramsUsed / yarn.gramsPerSkein) * yarn.skeinPrice)}
+                      </span>
+                    </p>
                   )}
-                </div>
-                <div>
-                  <Label className="text-xs">Nome do fio</Label>
-                  <Input
-                    placeholder="Ex: Fio 100% algodão bege"
-                    value={yarn.name}
-                    onChange={e => updateYarn(yarn.id, 'name', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Preço (R$)</Label>
-                    <Input
-                      type="number" min="0" step="0.01"
-                      value={yarn.skeinPrice || ''}
-                      onChange={e => updateYarn(yarn.id, 'skeinPrice', parseFloat(e.target.value) || 0)}
-                      placeholder="0,00"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">g/novelo</Label>
-                    <Input
-                      type="number" min="1"
-                      value={yarn.gramsPerSkein || ''}
-                      onChange={e => updateYarn(yarn.id, 'gramsPerSkein', parseFloat(e.target.value) || 1)}
-                      placeholder="100"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">g usadas</Label>
-                    <Input
-                      type="number" min="0"
-                      value={yarn.gramsUsed || ''}
-                      onChange={e => updateYarn(yarn.id, 'gramsUsed', parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-                {yarn.skeinPrice > 0 && yarn.gramsUsed > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Custo deste fio: <span className="text-primary font-medium">
-                      {formatCurrency((yarn.gramsUsed / yarn.gramsPerSkein) * yarn.skeinPrice)}
-                    </span>
-                  </p>
-                )}
-              </motion.div>
-            ))}
+                </motion.div>
+              )
+            })}
           </AnimatePresence>
           <Button variant="outline" size="sm" onClick={addYarn} className="w-full gap-2">
             <Plus className="h-4 w-4" /> Adicionar fio
@@ -248,10 +289,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
       {/* Extras */}
       <Card>
         <CardHeader>
-          <button
-            className="flex items-center justify-between w-full"
-            onClick={() => setShowExtras(p => !p)}
-          >
+          <button className="flex items-center justify-between w-full" onClick={() => setShowExtras(p => !p)}>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Package className="h-4 w-4" />
               Custos adicionais
@@ -289,14 +327,9 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
                     <Label className="text-xs text-muted-foreground">Adicionar do catálogo de insumos:</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {insumos.map(ins => (
-                        <button
-                          key={ins.id}
-                          onClick={() => {
-                            setExtras(p => [...p, { id: genId(), name: ins.name, qty: 1, unitPrice: ins.unit_price }])
-                            setShowExtras(true)
-                          }}
-                          className="text-xs px-2.5 py-1 rounded-full border border-border hover:bg-muted transition-colors"
-                        >
+                        <button key={ins.id}
+                          onClick={() => { setExtras(p => [...p, { id: genId(), name: ins.name, qty: 1, unitPrice: ins.unit_price }]); setShowExtras(true) }}
+                          className="text-xs px-2.5 py-1 rounded-full border border-border hover:bg-muted transition-colors">
                           + {ins.name}
                         </button>
                       ))}
@@ -386,12 +419,8 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
               <p className="text-3xl font-bold text-primary">{formatCurrency(suggestedPrice)}</p>
             </div>
             <div className="flex flex-col gap-2">
-              <Button onClick={handleUsePrice} className="w-full">
-                Usar esse preço na mensagem
-              </Button>
-              <Button variant="outline" onClick={handleSaveDashboard} className="w-full">
-                Salvar no Dashboard
-              </Button>
+              <Button onClick={handleUsePrice} className="w-full">Usar esse preço na mensagem</Button>
+              <Button variant="outline" onClick={handleSaveDashboard} className="w-full">Salvar no Dashboard</Button>
             </div>
           </CardContent>
         </Card>
