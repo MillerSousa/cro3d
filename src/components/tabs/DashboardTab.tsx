@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Image as ImageIcon, ExternalLink, Pencil, Trash2,
   LayoutGrid, Youtube, BookOpen, ShoppingBag, Link2, X, Check,
-  Loader2, ChevronDown, ChevronUp, Hammer,
+  Loader2, ChevronDown, ChevronUp, Hammer, Clock, Scissors, Box,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
-import { formatCurrency, formatTime } from '@/lib/utils'
+import { formatCurrency, formatTime, cn } from '@/lib/utils'
 import { DashboardModel, CostBreakdown } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -39,10 +39,14 @@ const STATUS_MAP = {
 
 function ModelSkeleton() {
   return (
-    <div className="space-y-2">
-      <Skeleton className="h-40 w-full rounded-2xl" />
-      <Skeleton className="h-4 w-2/3" />
-      <Skeleton className="h-3 w-1/3" />
+    <div className="rounded-[20px] border border-border/50 overflow-hidden">
+      <Skeleton className="h-40 w-full rounded-none" />
+      <div className="p-3.5 space-y-2">
+        <Skeleton className="h-3.5 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-[18px] w-1/2" />
+        <Skeleton className="h-4 w-1/3 rounded-lg" />
+      </div>
     </div>
   )
 }
@@ -137,23 +141,85 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelected(model)}
-              className="bg-card rounded-2xl border border-border card-shadow overflow-hidden text-left"
+              className="bg-card rounded-[20px] border border-border/50 overflow-hidden text-left w-full"
             >
-              {model.photo_url ? (
-                <img src={model.photo_url} alt={model.name} className="w-full h-36 object-cover" />
-              ) : (
-                <div className="w-full h-36 bg-muted/50 flex items-center justify-center">
-                  <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+              {/* ── Área da foto ── */}
+              <div
+                className="relative w-full overflow-hidden shrink-0"
+                style={{
+                  height: '160px',
+                  minHeight: '160px',
+                  maxHeight: '160px',
+                  backgroundColor: model.type === 'crochet' ? '#e8ddd4' : '#dde8e4',
+                }}
+              >
+                {model.photo_url ? (
+                  <img
+                    src={model.photo_url}
+                    alt={model.name}
+                    className="absolute inset-0 w-full !h-full object-cover object-center block"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ backgroundColor: model.type === 'crochet' ? '#e8ddd4' : '#dde8e4' }}
+                  >
+                    {model.type === 'crochet'
+                      ? <Scissors className="h-10 w-10" style={{ color: '#C4704F', opacity: 0.35 }} />
+                      : <Box className="h-10 w-10" style={{ color: '#7A9E7E', opacity: 0.35 }} />
+                    }
+                  </div>
+                )}
+
+                {/* Pill de tipo — canto superior esquerdo */}
+                <div
+                  className="absolute top-2 left-2 flex items-center gap-1 px-2.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
+                >
+                  {model.type === 'crochet'
+                    ? <Scissors className="h-2.5 w-2.5 shrink-0" style={{ color: '#C4704F' }} />
+                    : <Box className="h-2.5 w-2.5 shrink-0" style={{ color: '#7A9E7E' }} />
+                  }
+                  <span
+                    className="text-[10px] font-medium leading-none"
+                    style={{ color: model.type === 'crochet' ? '#C4704F' : '#7A9E7E' }}
+                  >
+                    {model.type === 'crochet' ? 'Crochê' : '3D'}
+                  </span>
                 </div>
-              )}
-              <div className="p-3">
-                <p className="text-sm font-medium leading-tight line-clamp-2">{model.name}</p>
-                <p className="text-primary font-semibold text-sm mt-1">{formatCurrency(model.price_per_unit)}</p>
-                <div className="mt-2">
-                  <Badge variant={STATUS_MAP[model.status].variant} className="text-[10px]">
-                    {STATUS_MAP[model.status].label}
-                  </Badge>
-                </div>
+
+                {/* Badge de status — canto superior direito */}
+                <span
+                  className={cn(
+                    'absolute top-2 right-2 text-[10px] font-medium leading-none px-2.5 py-1 rounded-full',
+                    model.status === 'discontinued' && 'bg-muted text-muted-foreground'
+                  )}
+                  style={
+                    model.status === 'available'
+                      ? { backgroundColor: '#e8f5e9', color: '#3B6D11' }
+                      : model.status === 'in_production'
+                      ? { backgroundColor: '#fff8e8', color: '#854F0B' }
+                      : undefined
+                  }
+                >
+                  {STATUS_MAP[model.status].label}
+                </span>
+              </div>
+
+              {/* ── Área de informações ── */}
+              <div className="p-3.5 space-y-1.5">
+                <p className="text-[13px] font-medium leading-[1.3] line-clamp-2">{model.name}</p>
+                <p className="text-lg font-medium" style={{ color: '#C4704F' }}>
+                  {formatCurrency(model.price_per_unit)}
+                </p>
+                {(model.time_hours || model.time_minutes) ? (
+                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/60">
+                    <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatTime(model.time_hours || 0, model.time_minutes || 0)} de produção
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </motion.button>
           ))}

@@ -868,7 +868,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
             <p className="text-3xl font-bold text-primary">{formatCurrency(suggestedPrice)}</p>
           </div>
           <div className="flex flex-col gap-2">
-            <Button onClick={handleUsePrice} className="w-full">Usar esse preço na mensagem</Button>
+            <Button onClick={handleUsePrice} className="w-full">Criar Mensagem</Button>
             <Button variant="outline" onClick={handleSaveDashboard} className="w-full">Salvar no Dashboard</Button>
           </div>
         </CardContent>
