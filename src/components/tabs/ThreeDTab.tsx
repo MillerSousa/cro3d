@@ -352,7 +352,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
             <SlidersHorizontal className="h-4 w-4" />
-            Parâmetros da impressão
+            Parâmetros da Impressão
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -363,7 +363,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
               onClick={() => setMultiPieceMode(false)}
               className={cn(
                 'flex-1 text-xs py-1.5 rounded-lg font-medium transition-all',
-                !multiPieceMode ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                !multiPieceMode ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Peça única
@@ -372,7 +372,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
               onClick={() => setMultiPieceMode(true)}
               className={cn(
                 'flex-1 text-xs py-1.5 rounded-lg font-medium transition-all',
-                multiPieceMode ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                multiPieceMode ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Múltiplas peças
@@ -710,7 +710,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
           <button className="flex items-center justify-between w-full" onClick={() => setShowExtras(p => !p)}>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Package className="h-4 w-4" />
-              Custos adicionais
+              Custos Adicionais
             </CardTitle>
             {showExtras ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </button>
@@ -878,7 +878,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
       <Dialog open={showPrinterForm} onOpenChange={open => { setShowPrinterForm(open); if (!open) setEditPrinter(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editPrinter ? 'Editar impressora' : 'Nova impressora'}</DialogTitle>
+            <DialogTitle>{editPrinter ? 'Editar Impressora' : 'Nova Impressora'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 px-6">
             <div>
@@ -900,7 +900,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
       {/* Dialog — confirmar exclusão de impressora */}
       <Dialog open={!!confirmDeletePrinterId} onOpenChange={v => !v && setConfirmDeletePrinterId(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remover impressora?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Remover Impressora?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground px-6">Esta ação não pode ser desfeita.</p>
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeletePrinterId(null)}>Cancelar</Button>

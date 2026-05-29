@@ -175,17 +175,78 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
         )}
       </AnimatePresence>
 
-      {/* Form dialog */}
-      <Dialog open={showForm} onOpenChange={v => { setShowForm(v); if (!v) setEditModel(null) }}>
-        <DialogContent className="max-w-lg max-h-[90vh]">
-          <ModelForm
-            editModel={editModel}
-            prefillData={prefillData}
-            onSave={() => { setShowForm(false); setEditModel(null); fetchModels(); toast.success('Modelo salvo!') }}
-            onCancel={() => { setShowForm(false); setEditModel(null) }}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Form — full-screen overlay */}
+      <AnimatePresence>
+        {showForm && (
+          <>
+            {/* Mobile: tela cheia que desliza de baixo */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed inset-0 z-50 bg-card flex flex-col md:hidden"
+            >
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0 bg-card">
+                <button
+                  onClick={() => { setShowForm(false); setEditModel(null) }}
+                  className="p-1.5 -ml-1.5 rounded-xl hover:bg-muted active:bg-muted transition-colors shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <span className="font-semibold text-sm truncate flex-1">
+                  {editModel ? 'Editar Modelo' : 'Novo Modelo'}
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <ModelForm
+                  editModel={editModel}
+                  prefillData={prefillData}
+                  onSave={() => { setShowForm(false); setEditModel(null); fetchModels(); toast.success('Modelo salvo!') }}
+                  onCancel={() => { setShowForm(false); setEditModel(null) }}
+                />
+              </div>
+            </motion.div>
+
+            {/* Desktop: modal centralizado */}
+            <div className="fixed inset-0 z-50 hidden md:block" onClick={() => { setShowForm(false); setEditModel(null) }}>
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                onClick={e => e.stopPropagation()}
+                className="absolute inset-0 flex items-center justify-center p-4"
+              >
+                <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
+                  <button
+                    onClick={() => { setShowForm(false); setEditModel(null) }}
+                    className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/55 hover:bg-black/75 transition-colors text-white backdrop-blur-sm shadow-lg"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
+                    <span className="font-semibold text-base flex-1">
+                      {editModel ? 'Editar Modelo' : 'Novo Modelo'}
+                    </span>
+                  </div>
+                  <div className="overflow-y-auto flex-1 rounded-b-2xl">
+                    <ModelForm
+                      editModel={editModel}
+                      prefillData={prefillData}
+                      onSave={() => { setShowForm(false); setEditModel(null); fetchModels(); toast.success('Modelo salvo!') }}
+                      onCancel={() => { setShowForm(false); setEditModel(null) }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Confirm delete */}
       <Dialog open={!!confirmDelete} onOpenChange={v => !v && setConfirmDelete(null)}>
@@ -219,7 +280,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Materials */}
       {(model.materials || model.yarn_used || model.time_hours != null) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Materiais e produção</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Materiais e Produção</h3>
           {model.yarn_used && <p className="text-sm"><span className="text-muted-foreground">Fio:</span> {model.yarn_used}</p>}
           {model.materials && <p className="text-sm"><span className="text-muted-foreground">Materiais:</span> {model.materials}</p>}
           {(model.time_hours != null || model.time_minutes != null) && (
@@ -303,7 +364,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Links */}
       {(model.youtube_link || model.tutorial_link || model.material_link || model.stl_link) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Links úteis</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Links Úteis</h3>
           <div className="flex flex-wrap gap-2">
             {model.youtube_link && (
               <a href={model.youtube_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
@@ -332,7 +393,7 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
       {/* Notes */}
       {(model.notes || model.tips) && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Observações / dicas</h3>
+          <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">Observações / Dicas</h3>
           {model.notes && <p className="text-sm leading-relaxed whitespace-pre-wrap">{model.notes}</p>}
           {model.tips && <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{model.tips}</p>}
         </div>
@@ -643,11 +704,7 @@ function ModelForm({
   }
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{editModel ? 'Editar modelo' : 'Novo modelo'}</DialogTitle>
-      </DialogHeader>
-      <div className="px-6 space-y-4 pb-2 overflow-y-auto max-h-[calc(90vh-9rem)]">
+    <div className="p-6 space-y-4">
 
         {/* Type toggle */}
         <div className="flex gap-2 p-1 bg-muted rounded-xl">
@@ -905,14 +962,13 @@ function ModelForm({
             />
           </div>
         )}
-      </div>
-      <DialogFooter className="px-6">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button onClick={handleSave} disabled={saving} className="gap-2">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           Salvar no Dashboard
         </Button>
-      </DialogFooter>
-    </>
+      </div>
+    </div>
   )
 }

@@ -243,7 +243,7 @@ function AppContent() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#C4704F] to-[#a85a3e] flex items-center justify-center">
               <span className="text-white font-bold text-xs">C3</span>
             </div>
-            <span className="font-semibold text-sm">{TAB_LABELS[activeTab]}</span>
+            <span className="font-semibold text-sm text-primary">{TAB_LABELS[activeTab]}</span>
           </div>
           <div className="flex items-center gap-2">
             <button

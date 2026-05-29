@@ -47,7 +47,7 @@ export function Sidebar({ activeTab, onTabChange, darkMode, onToggleDark }: Side
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C4704F] to-[#a85a3e] flex items-center justify-center">
           <span className="text-white font-bold text-sm">C3</span>
         </div>
-        <span className="font-bold text-lg tracking-tight">Cro3D</span>
+        <span className="font-bold text-lg tracking-tight text-primary">Cro3D</span>
       </div>
 
       {/* User info */}

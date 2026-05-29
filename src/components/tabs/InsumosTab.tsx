@@ -98,7 +98,7 @@ export function InsumosTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
             <Package className="h-4 w-4" />
-            Calculadora de preço unitário
+            Calculadora de Preço Unitário
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -136,7 +136,7 @@ export function InsumosTab() {
                           <button
                             key={s}
                             onClick={() => updateCard(card.id, 'name', s)}
-                            className="text-xs px-2.5 py-1 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors"
+                            className="text-xs px-2.5 py-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                           >
                             {s}
                           </button>
@@ -180,7 +180,7 @@ export function InsumosTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
             <BookMarked className="h-4 w-4" />
-            Catálogo salvo
+            Catálogo Salvo
           </CardTitle>
         </CardHeader>
         <CardContent>

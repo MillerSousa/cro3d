@@ -101,7 +101,7 @@ export function MessageTab({ prefillPrice }: MessageTabProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
             <MessageSquare className="h-4 w-4" />
-            Proposta para cliente
+            Proposta Para Cliente
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -194,7 +194,7 @@ export function MessageTab({ prefillPrice }: MessageTabProps) {
           <Card className="border-primary/20">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Mensagem para WhatsApp</CardTitle>
+                <CardTitle className="text-sm">Mensagem Para WhatsApp</CardTitle>
                 <Button size="sm" variant="ghost" onClick={() => copyText(generatedMsg, 'msg')} className="gap-1.5 h-8">
                   {copiedMsg ? <Check className="h-4 w-4 text-sage" /> : <Copy className="h-4 w-4" />}
                   {copiedMsg ? 'Copiado!' : 'Copiar'}
@@ -214,7 +214,7 @@ export function MessageTab({ prefillPrice }: MessageTabProps) {
           <Card className="border-accent/20">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Prompt para IA (Claude / ChatGPT)</CardTitle>
+                <CardTitle className="text-sm">Prompt Para IA (Claude / ChatGPT)</CardTitle>
                 <Button size="sm" variant="ghost" onClick={() => copyText(generatedPrompt, 'prompt')} className="gap-1.5 h-8">
                   {copiedPrompt ? <Check className="h-4 w-4 text-sage" /> : <Copy className="h-4 w-4" />}
                   {copiedPrompt ? 'Copiado!' : 'Copiar'}

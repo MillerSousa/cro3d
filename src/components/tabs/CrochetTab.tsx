@@ -155,7 +155,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
             <Scissors className="h-4 w-4" />
-            Fios utilizados
+            Fios Utilizados
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -168,7 +168,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="space-y-3 p-4 rounded-xl bg-muted/40 border border-border/50"
+                  className="space-y-3 p-4 rounded-xl border border-border/60"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-primary uppercase tracking-wide">Fio {idx + 1}</span>
@@ -292,7 +292,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
           <button className="flex items-center justify-between w-full" onClick={() => setShowExtras(p => !p)}>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Package className="h-4 w-4" />
-              Custos adicionais
+              Custos Adicionais
             </CardTitle>
             {showExtras ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </button>

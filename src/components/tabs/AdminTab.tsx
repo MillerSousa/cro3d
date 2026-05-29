@@ -587,7 +587,7 @@ export function AdminTab() {
       {/* Adicionar usuário */}
       <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Adicionar usuário</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Adicionar Usuário</DialogTitle></DialogHeader>
           <div className="space-y-3 px-6">
             <div>
               <Label>Nome</Label>
@@ -621,7 +621,7 @@ export function AdminTab() {
       {/* Confirmar exclusão de usuário */}
       <Dialog open={!!confirmDeleteUser} onOpenChange={v => !v && setConfirmDeleteUser(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remover usuário?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Remover Usuário?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground px-6">O usuário perderá acesso ao app imediatamente.</p>
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteUser(null)}>Cancelar</Button>
@@ -633,7 +633,7 @@ export function AdminTab() {
       {/* Marca de filamento — form */}
       <Dialog open={showBrandForm} onOpenChange={open => { setShowBrandForm(open); if (!open) setEditBrand(null) }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editBrand ? 'Editar marca' : 'Adicionar marca'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editBrand ? 'Editar Marca' : 'Adicionar Marca'}</DialogTitle></DialogHeader>
           <div className="space-y-3 px-6">
             <div>
               <Label>Nome da marca</Label>
@@ -661,7 +661,7 @@ export function AdminTab() {
       {/* Marca de filamento — confirmar exclusão */}
       <Dialog open={!!confirmDeleteBrand} onOpenChange={v => !v && setConfirmDeleteBrand(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remover marca?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Remover Marca?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground px-6">Os filamentos vinculados ficarão sem marca.</p>
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteBrand(null)}>Cancelar</Button>
@@ -673,7 +673,7 @@ export function AdminTab() {
       {/* Filamento — form */}
       <Dialog open={showFilamentForm} onOpenChange={open => { setShowFilamentForm(open); if (!open) setEditFilament(null) }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editFilament ? 'Editar filamento' : 'Adicionar filamento'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editFilament ? 'Editar Filamento' : 'Adicionar Filamento'}</DialogTitle></DialogHeader>
           <div className="space-y-3 px-6">
             <div>
               <Label>Nome do filamento</Label>
@@ -708,7 +708,7 @@ export function AdminTab() {
       {/* Filamento — confirmar exclusão */}
       <Dialog open={!!confirmDeleteFilament} onOpenChange={v => !v && setConfirmDeleteFilament(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remover filamento?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Remover Filamento?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground px-6">Esta ação não pode ser desfeita.</p>
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteFilament(null)}>Cancelar</Button>
@@ -720,7 +720,7 @@ export function AdminTab() {
       {/* Marca de fio — form */}
       <Dialog open={showYarnBrandForm} onOpenChange={open => { setShowYarnBrandForm(open); if (!open) setEditYarnBrand(null) }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editYarnBrand ? 'Editar marca de fio' : 'Adicionar marca de fio'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editYarnBrand ? 'Editar Marca de Fio' : 'Adicionar Marca de Fio'}</DialogTitle></DialogHeader>
           <div className="space-y-3 px-6">
             <div>
               <Label>Nome da marca</Label>
@@ -748,7 +748,7 @@ export function AdminTab() {
       {/* Marca de fio — confirmar exclusão */}
       <Dialog open={!!confirmDeleteYarnBrand} onOpenChange={v => !v && setConfirmDeleteYarnBrand(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remover marca de fio?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Remover Marca de Fio?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground px-6">Esta ação não pode ser desfeita.</p>
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteYarnBrand(null)}>Cancelar</Button>
