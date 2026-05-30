@@ -131,7 +131,7 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-start">
           {[...Array(6)].map((_, i) => <ModelSkeleton key={i} />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -141,7 +141,7 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
           <p className="text-xs mt-1">Clique em "+ Novo modelo" para começar.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-stretch">
           {filtered.map(model => (
             <motion.button
               key={model.id}
@@ -150,15 +150,13 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelected(model)}
-              className="bg-card rounded-[20px] border border-border/50 overflow-hidden text-left w-full card-clickable"
+              className="bg-card rounded-[20px] border border-border/50 overflow-hidden text-left w-full card-clickable flex flex-col h-full"
             >
               {/* ── Área da foto ── */}
               <div
-                className="relative w-full overflow-hidden shrink-0"
+                className="relative w-full overflow-hidden"
                 style={{
-                  height: '160px',
-                  minHeight: '160px',
-                  maxHeight: '160px',
+                  aspectRatio: '4 / 3',
                   backgroundColor: model.type === 'crochet' ? '#e8ddd4' : '#dde8e4',
                 }}
               >
@@ -220,7 +218,7 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
               </div>
 
               {/* ── Área de informações ── */}
-              <div className="p-3.5 space-y-1.5">
+              <div className="p-3.5 space-y-1.5 flex-1 flex flex-col justify-start">
                 <p className="text-[13px] font-medium leading-[1.3] line-clamp-2">{model.name}</p>
                 <p className="text-lg font-medium" style={{ color: '#C4704F' }}>
                   {formatCurrency(model.price_per_unit)}
