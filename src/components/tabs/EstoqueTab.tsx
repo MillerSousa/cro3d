@@ -56,7 +56,7 @@ function StockBar({ grams }: { grams: number }) {
 
 function StockSkeleton() {
   return (
-    <div className="rounded-[20px] border border-border/50 p-4 space-y-2.5">
+    <div className="rounded-[20px] border border-border/50 p-4 space-y-2.5 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3">
         <Skeleton className="w-8 h-8 rounded-full shrink-0" />
         <div className="flex-1 space-y-1.5">
@@ -298,7 +298,7 @@ function YarnCard({
   const qtyColor = stock.quantity_grams > 200 ? '#7A9E7E' : stock.quantity_grams >= 50 ? '#f59e0b' : '#ef4444'
 
   return (
-    <div className="rounded-[20px] border border-border/50 bg-card p-4 space-y-3">
+    <div className="rounded-[20px] border border-border/50 bg-card p-4 space-y-3 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3">
         <ColorCircle hex={stock.color_hex} color={stock.color} />
         <div className="flex-1 min-w-0">
@@ -634,7 +634,7 @@ function FilamentCard({
   const mainLabel = [stock.filament?.name, stock.brand?.name].filter(Boolean).join(' · ') || stock.color
 
   return (
-    <div className="rounded-[20px] border border-border/50 bg-card p-4 space-y-3">
+    <div className="rounded-[20px] border border-border/50 bg-card p-4 space-y-3 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3">
         <ColorCircle hex={stock.color_hex} color={stock.color} />
         <div className="flex-1 min-w-0">
@@ -994,7 +994,7 @@ function ShoppingItemCard({
 
   return (
     <div className={cn(
-      'rounded-[20px] border border-border/50 bg-card p-4 space-y-2.5 transition-opacity',
+      'rounded-[20px] border border-border/50 bg-card p-4 space-y-2.5 transition-opacity shadow-[var(--shadow-card)]',
       isPurchased && 'opacity-60'
     )}>
       <div className="flex items-center gap-3">

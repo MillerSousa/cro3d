@@ -112,7 +112,7 @@ export function InsumosTab() {
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="p-4 rounded-xl border border-border/60 space-y-3"
+                  className="p-4 rounded-xl border border-border/60 space-y-3 shadow-[var(--shadow-card)]"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-primary uppercase tracking-wide">Insumo {idx + 1}</span>
@@ -195,7 +195,7 @@ export function InsumosTab() {
           ) : (
             <div className="space-y-2">
               {catalog.map(ins => (
-                <div key={ins.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                <div key={ins.id} className="flex items-center gap-2 py-2.5 px-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors shadow-[var(--shadow-card)]">
                   {editId === ins.id ? (
                     <>
                       <Input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 h-8 text-sm" />

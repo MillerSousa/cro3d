@@ -150,7 +150,7 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelected(model)}
-              className="bg-card rounded-[20px] border border-border/50 overflow-hidden text-left w-full"
+              className="bg-card rounded-[20px] border border-border/50 overflow-hidden text-left w-full card-clickable"
             >
               {/* ── Área da foto ── */}
               <div

@@ -525,7 +525,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="p-4 rounded-xl border border-border/60 space-y-3"
+                      className="p-4 rounded-xl border border-border/60 space-y-3 shadow-[var(--shadow-card)]"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-primary uppercase tracking-wide">

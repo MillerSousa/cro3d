@@ -168,7 +168,7 @@ export function CrochetTab({ onUsePrice, onSaveDashboard, prefillData, onPrefill
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="space-y-3 p-4 rounded-xl border border-border/60"
+                  className="space-y-3 p-4 rounded-xl border border-border/60 shadow-[var(--shadow-card)]"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-primary uppercase tracking-wide">Fio {idx + 1}</span>

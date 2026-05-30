@@ -24,7 +24,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Miller\\\\Documents\\\\Sites\\\\ClaudeCode\\\\Cro3D\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
       "Bash(Format-Table -AutoSize)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }
