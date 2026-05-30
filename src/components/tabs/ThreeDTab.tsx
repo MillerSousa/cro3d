@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn, formatCurrency } from '@/lib/utils'
-import { ExtraInput, Printer, ThreeDCalcData, Insumo, Filament, PrintPiece, CostBreakdown } from '@/lib/types'
+import { ExtraInput, Printer, ThreeDCalcData, Insumo, Filament, FilamentModel, PrintPiece, CostBreakdown } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
@@ -42,9 +42,10 @@ interface ThreeDTabProps {
   onSaveDashboard: (data: ThreeDCalcData & { price: number }) => void
   prefillData?: CostBreakdown | null
   onPrefillConsumed?: () => void
+  onNavigateAdmin?: (context: 'model' | 'filament') => void
 }
 
-export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillConsumed }: ThreeDTabProps) {
+export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillConsumed, onNavigateAdmin }: ThreeDTabProps) {
   const { user } = useAuth()
 
   // ── Impressoras ─────────────────────────────────────────────
@@ -59,6 +60,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
 
   // ── Filamentos ──────────────────────────────────────────────
   const [filaments, setFilaments] = useState<Filament[]>([])
+  const [filamentModels, setFilamentModels] = useState<FilamentModel[]>([])
 
   // ── Modo ────────────────────────────────────────────────────
   const [multiPieceMode, setMultiPieceMode] = useState(false)
@@ -87,6 +89,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
     if (user) {
       fetchPrinters()
       fetchFilaments()
+      fetchFilamentModels()
       supabase.from('insumos').select('*').eq('user_id', user.id).then(({ data }) => {
         if (data) setInsumos(data as Insumo[])
       })
@@ -202,6 +205,11 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
       .select('*, brand:filament_brands(id, name, logo_url)')
       .order('name')
     if (data) setFilaments(data as Filament[])
+  }
+
+  async function fetchFilamentModels() {
+    const { data } = await supabase.from('filament_models').select('*').order('name')
+    if (data) setFilamentModels(data as FilamentModel[])
   }
 
   // ── Peças helpers ────────────────────────────────────────────
@@ -398,7 +406,12 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
             <div className="space-y-3">
               {/* Filamento */}
               <div>
-                <Label className="text-xs">Filamento utilizado</Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs">Filamento utilizado</Label>
+                  <button onClick={() => onNavigateAdmin?.('filament')} className="text-[11px] text-primary font-medium hover:underline">
+                    + Adicionar filamento
+                  </button>
+                </div>
                 <Select
                   value={singleFilamentId || 'none'}
                   onValueChange={v => {
@@ -407,7 +420,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
                     setSingleUseGlobalPrice(!!id)
                   }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecionar filamento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -431,13 +444,26 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
 
               {/* Modelo do filamento */}
               <div>
-                <Label className="text-xs">Modelo do filamento</Label>
-                <Input
-                  value={singleFilamentModelName}
-                  onChange={e => setSingleFilamentModelName(e.target.value)}
-                  placeholder="Ex: PLA High Speed, PETG Basic"
-                  className="mt-1"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs">Modelo do filamento</Label>
+                  <button onClick={() => onNavigateAdmin?.('model')} className="text-[11px] text-primary font-medium hover:underline">
+                    + Adicionar modelo
+                  </button>
+                </div>
+                <Select
+                  value={singleFilamentModelName || 'none'}
+                  onValueChange={v => setSingleFilamentModelName(v === 'none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem modelo</SelectItem>
+                    {filamentModels.map(m => (
+                      <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Gramas */}
@@ -572,22 +598,40 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
 
                       {/* Modelo do filamento */}
                       <div>
-                        <Label className="text-xs">Modelo do filamento</Label>
-                        <Input
-                          value={piece.filamentModelName || ''}
-                          onChange={e => updatePiece(piece.id, 'filamentModelName', e.target.value)}
-                          placeholder="Ex: PLA High Speed, PETG Basic"
-                          className="mt-1"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <Label className="text-xs">Modelo do filamento</Label>
+                          <button onClick={() => onNavigateAdmin?.('model')} className="text-[11px] text-primary font-medium hover:underline">
+                            + Adicionar modelo
+                          </button>
+                        </div>
+                        <Select
+                          value={piece.filamentModelName || 'none'}
+                          onValueChange={v => updatePiece(piece.id, 'filamentModelName', v === 'none' ? '' : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecionar modelo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem modelo</SelectItem>
+                            {filamentModels.map(m => (
+                              <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
-                        <Label className="text-xs">Filamento utilizado</Label>
+                        <div className="flex items-center justify-between mb-1">
+                          <Label className="text-xs">Filamento utilizado</Label>
+                          <button onClick={() => onNavigateAdmin?.('filament')} className="text-[11px] text-primary font-medium hover:underline">
+                            + Adicionar filamento
+                          </button>
+                        </div>
                         <Select
                           value={piece.filamentId || 'none'}
                           onValueChange={v => updatePiece(piece.id, 'filamentId', v === 'none' ? null : v)}
                         >
-                          <SelectTrigger className="mt-1">
+                          <SelectTrigger>
                             <SelectValue placeholder="Selecionar filamento" />
                           </SelectTrigger>
                           <SelectContent>

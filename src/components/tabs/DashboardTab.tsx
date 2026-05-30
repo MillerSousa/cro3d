@@ -163,10 +163,14 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
                 }}
               >
                 {model.photo_url ? (
-                  <img
-                    src={model.photo_url}
-                    alt={model.name}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0, right: 0, bottom: 0, left: 0,
+                      backgroundImage: `url(${model.photo_url})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
                   />
                 ) : (
                   <div
@@ -347,7 +351,105 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
   onFabricar: () => void
   isOwner: boolean
 }) {
+  const { user } = useAuth()
   const [showPhoto, setShowPhoto] = useState(false)
+  const [showFabricado, setShowFabricado] = useState(false)
+  const [fabricadoUnits, setFabricadoUnits] = useState('1')
+  const [fabricadoSaving, setFabricadoSaving] = useState(false)
+  const [fabricadoWarnings, setFabricadoWarnings] = useState<string[]>([])
+  const [fabricadoDone, setFabricadoDone] = useState(false)
+
+  function getMaterials() {
+    const cb = model.cost_breakdown
+    if (!cb) return null
+    if (model.type === 'crochet' && cb.yarns && cb.yarns.length > 0) {
+      return cb.yarns.map(y => ({
+        name: y.name || 'Fio',
+        brand: y.brand_name || null,
+        gramsPerUnit: y.grams_used || 0,
+        stockTable: 'yarn_stock' as const,
+        matchField: 'name' as const,
+        matchValue: y.name || '',
+      }))
+    }
+    if (model.type === '3d') {
+      if (cb.mode === 'multiple' && cb.pieces && cb.pieces.length > 0) {
+        return cb.pieces.map(p => ({
+          name: p.filament_name || p.name || 'Filamento',
+          brand: p.brand_name || null,
+          gramsPerUnit: p.grams || 0,
+          color: p.color || '',
+          stockTable: 'filament_stock' as const,
+          matchField: 'color' as const,
+          matchValue: p.color || '',
+        }))
+      }
+      return [{
+        name: cb.single_filament_name || 'Filamento',
+        brand: cb.single_brand_name || null,
+        gramsPerUnit: cb.filament_grams || 0,
+        stockTable: 'filament_stock' as const,
+        matchField: 'color' as const,
+        matchValue: '',
+      }]
+    }
+    return null
+  }
+
+  async function handleConfirmFabricado() {
+    const units = Math.max(1, parseInt(fabricadoUnits) || 1)
+    const materials = getMaterials()
+    const warnings: string[] = []
+    setFabricadoSaving(true)
+
+    if (materials && materials.length > 0) {
+      for (const mat of materials) {
+        const totalGrams = mat.gramsPerUnit * units
+        if (totalGrams <= 0) continue
+
+        const { data: stocks } = await supabase
+          .from(mat.stockTable)
+          .select('id, quantity_grams')
+          .eq('user_id', user!.id)
+          .ilike(mat.matchField, `%${mat.matchValue}%`)
+          .limit(1)
+
+        if (stocks && stocks.length > 0) {
+          const stock = stocks[0]
+          if (stock.quantity_grams < totalGrams) {
+            warnings.push(`Estoque insuficiente para ${mat.name} — dedução parcial registrada.`)
+          }
+          const newQty = Math.max(0, stock.quantity_grams - totalGrams)
+          await supabase
+            .from(mat.stockTable)
+            .update({ quantity_grams: newQty, updated_at: new Date().toISOString() })
+            .eq('id', stock.id)
+        }
+      }
+    }
+
+    await supabase.from('production_history').insert({
+      user_id: user!.id,
+      model_id: model.id,
+      model_name: model.name,
+      produced_at: new Date().toISOString(),
+      materials_used: materials
+        ? materials.map(m => ({ name: m.name, brand: m.brand, total_grams: m.gramsPerUnit * units }))
+        : null,
+    })
+
+    setFabricadoWarnings(warnings)
+    setFabricadoSaving(false)
+    setFabricadoDone(true)
+    toast.success('Fabricação registrada com sucesso! 🎉')
+  }
+
+  function closeFabricado() {
+    setShowFabricado(false)
+    setFabricadoUnits('1')
+    setFabricadoWarnings([])
+    setFabricadoDone(false)
+  }
 
   // Shared content blocks (materials, links, notes, actions) — used on both mobile and desktop
   const sharedContent = (
@@ -491,6 +593,14 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
         <Button onClick={onUseInCalc} className="w-full">
           Usar este modelo na calculadora
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => setShowFabricado(true)}
+          className="w-full gap-2"
+          style={{ borderColor: '#7A9E7E', color: '#7A9E7E' }}
+        >
+          🎉 Fabricado!
+        </Button>
         {isOwner && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={onEdit} className="flex-1 gap-2">
@@ -617,6 +727,76 @@ function ModelDetailModal({ model, onClose, onEdit, onDelete, onUseInCalc, onFab
           </div>
         </motion.div>
       </div>
+
+      {/* Dialog: Fabricado! */}
+      <Dialog open={showFabricado} onOpenChange={v => { if (!v) closeFabricado() }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Registrar fabricação</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 space-y-4">
+            <p className="text-sm font-medium truncate">{model.name}</p>
+
+            {!fabricadoDone ? (
+              <>
+                {getMaterials() === null ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este modelo não tem materiais cadastrados. Deseja registrar mesmo assim?
+                  </p>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Materiais que serão deduzidos</p>
+                      {getMaterials()!.map((mat, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground truncate">
+                            {mat.name}{mat.brand ? ` · ${mat.brand}` : ''}
+                          </span>
+                          <span className="font-medium shrink-0 ml-2">
+                            {mat.gramsPerUnit * (parseInt(fabricadoUnits) || 1)}g
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <Label className="text-xs">Quantas unidades você fabricou?</Label>
+                      <Input
+                        type="number" min="1" step="1"
+                        value={fabricadoUnits}
+                        onChange={e => setFabricadoUnits(e.target.value)}
+                        className="mt-1 w-28"
+                      />
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-[#7A9E7E] font-medium">Fabricação registrada com sucesso! 🎉</p>
+                {fabricadoWarnings.map((w, i) => (
+                  <p key={i} className="text-xs rounded-xl px-3 py-2 leading-relaxed"
+                    style={{ backgroundColor: '#fffbeb', color: '#92400e' }}>
+                    {w}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="px-6">
+            {!fabricadoDone ? (
+              <>
+                <Button variant="outline" onClick={closeFabricado}>Cancelar</Button>
+                <Button onClick={handleConfirmFabricado} disabled={fabricadoSaving}>
+                  {fabricadoSaving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+                  Confirmar fabricação
+                </Button>
+              </>
+            ) : (
+              <Button onClick={closeFabricado} className="w-full">Fechar</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Visualizador de foto em tela cheia */}
       <AnimatePresence>

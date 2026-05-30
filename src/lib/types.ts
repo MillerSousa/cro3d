@@ -110,6 +110,12 @@ export interface Filament {
   brand?: FilamentBrand | null
 }
 
+export interface FilamentModel {
+  id: string
+  name: string
+  created_at?: string
+}
+
 export interface PrintPiece {
   id: string
   name: string
@@ -125,7 +131,7 @@ export interface PrintPiece {
   timeMinutes: number
 }
 
-export type TabId = 'home' | 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin'
+export type TabId = 'home' | 'crochet' | '3d' | 'insumos' | 'mensagem' | 'dashboard' | 'admin' | 'estoque-crochet' | 'estoque-3d'
 
 export interface CrochetCalcData {
   yarns: YarnInput[]
@@ -172,6 +178,51 @@ export interface ThreeDCalcData {
   singleFilamentName?: string
   singleFilamentBrandName?: string
   singleFilamentModelName?: string
+}
+
+export interface YarnStock {
+  id: string
+  user_id: string
+  brand: string | null
+  name: string
+  color: string
+  color_hex: string | null
+  weight_grams: string | null
+  quantity_grams: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface FilamentStock {
+  id: string
+  user_id: string
+  filament_id: string | null
+  brand_id: string | null
+  color: string
+  color_hex: string | null
+  quantity_grams: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+  filament?: { id: string; name: string } | null
+  brand?: { id: string; name: string } | null
+}
+
+export interface ShoppingItem {
+  id: string
+  user_id: string
+  type: 'crochet' | '3d'
+  name: string
+  brand: string | null
+  color: string | null
+  color_hex: string | null
+  quantity_grams: number | null
+  reason: string | null
+  priority: 'urgent' | 'normal' | 'low'
+  purchase_url: string | null
+  status: 'pending' | 'purchased'
+  created_at: string
 }
 
 export interface MessageData {

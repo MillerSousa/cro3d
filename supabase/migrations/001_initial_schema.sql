@@ -109,3 +109,26 @@ CREATE POLICY "model_photos_select" ON storage.objects
 
 CREATE POLICY "model_photos_delete" ON storage.objects
   FOR DELETE TO authenticated USING (bucket_id = 'model-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- 5. Modelos de filamento (ex: High Speed, Basic, Matte)
+-- Execute este bloco no Supabase SQL Editor se ainda não existir a tabela
+CREATE TABLE IF NOT EXISTS filament_models (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE filament_models ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "filament_models_select" ON filament_models
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "filament_models_insert" ON filament_models
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "filament_models_update" ON filament_models
+  FOR UPDATE TO authenticated USING (true);
+
+CREATE POLICY "filament_models_delete" ON filament_models
+  FOR DELETE TO authenticated USING (true);

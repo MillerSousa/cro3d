@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import {
-  Scissors, Box, Package, MessageSquare, LayoutGrid, Settings, LogOut, Sun, Moon
+  Home, Package, MessageSquare, LayoutGrid, Settings, LogOut, Sun, Moon
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { TabId } from '@/lib/types'
@@ -14,12 +14,11 @@ interface NavItem {
 }
 
 const ALL_TABS: NavItem[] = [
-  { id: 'crochet', label: 'Crochê', icon: Scissors },
-  { id: '3d', label: 'Impressão 3D', icon: Box },
-  { id: 'insumos', label: 'Insumos', icon: Package },
-  { id: 'mensagem', label: 'Mensagem', icon: MessageSquare },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-  { id: 'admin', label: 'Configurações', icon: Settings },
+  { id: 'home',      label: 'Home',          icon: Home },
+  { id: 'insumos',   label: 'Insumos',       icon: Package },
+  { id: 'dashboard', label: 'Dashboard',     icon: LayoutGrid },
+  { id: 'mensagem',  label: 'Mensagem',      icon: MessageSquare },
+  { id: 'admin',     label: 'Administrar',   icon: Settings },
 ]
 
 interface SidebarProps {
@@ -33,12 +32,16 @@ export function Sidebar({ activeTab, onTabChange, darkMode, onToggleDark }: Side
   const { allowedUser, signOut } = useAuth()
   const role = allowedUser?.role
 
-  const visibleTabs = ALL_TABS.filter((tab) => {
-    if (tab.id === 'admin') return true
-    if (tab.id === 'crochet') return role === 'admin' || role === 'crochet' || role === 'both'
-    if (tab.id === '3d') return role === 'admin' || role === '3d' || role === 'both'
-    return true
+  const visibleTabs = ALL_TABS.filter(({ id }) => {
+    if (id === 'home' || id === 'insumos' || id === 'mensagem' || id === 'dashboard') return true
+    if (id === 'admin') return role === 'admin'
+    return false
   })
+
+  function isActive(id: TabId) {
+    if (id === 'home') return activeTab === 'home' || activeTab === 'estoque-crochet' || activeTab === 'estoque-3d'
+    return activeTab === id
+  }
 
   return (
     <aside className="hidden md:flex flex-col w-56 h-screen sticky top-0 bg-card border-r border-border p-4 shrink-0">
@@ -60,21 +63,21 @@ export function Sidebar({ activeTab, onTabChange, darkMode, onToggleDark }: Side
       <nav className="flex-1 flex flex-col gap-1">
         {visibleTabs.map((tab) => {
           const Icon = tab.icon
-          const isActive = activeTab === tab.id
+          const active = isActive(tab.id)
           return (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left w-full',
-                isActive
+                active
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {tab.label}
-              {isActive && (
+              {active && (
                 <motion.div
                   layoutId="sidebar-indicator"
                   className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"

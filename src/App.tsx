@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Sun, Moon } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -13,6 +13,7 @@ import { InsumosTab } from '@/components/tabs/InsumosTab'
 import { MessageTab } from '@/components/tabs/MessageTab'
 import { DashboardTab } from '@/components/tabs/DashboardTab'
 import { AdminTab } from '@/components/tabs/AdminTab'
+import { EstoqueTab } from '@/components/tabs/EstoqueTab'
 import { FabricarPage } from '@/components/pages/FabricarPage'
 import { TabId, DashboardModel, CrochetCalcData, ThreeDCalcData, CostBreakdown } from '@/lib/types'
 
@@ -27,6 +28,8 @@ const TAB_LABELS: Record<TabId, string> = {
   mensagem: 'Mensagem',
   dashboard: 'Dashboard',
   admin: 'Configurações',
+  'estoque-crochet': 'Estoque Crochê',
+  'estoque-3d': 'Estoque 3D',
 }
 
 function AppContent() {
@@ -34,6 +37,7 @@ function AppContent() {
   const role = allowedUser?.role
 
   const [activeTab, setActiveTab] = useState<TabId>(() => (localStorage.getItem(ACTIVE_TAB_KEY) as TabId) || 'home')
+  const prevRoleRef = useRef<string | null | undefined>(undefined)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem(DARK_KEY) === 'true')
   const [messagePrice, setMessagePrice] = useState<number | undefined>()
   const [dashboardPrefill, setDashboardPrefill] = useState<{
@@ -42,6 +46,7 @@ function AppContent() {
   const [fabricarModel, setFabricarModel] = useState<DashboardModel | null>(null)
   const [crochetPrefill, setCrochetPrefill] = useState<CostBreakdown | null>(null)
   const [threeDPrefill, setThreeDPrefill] = useState<CostBreakdown | null>(null)
+  const [adminRedirectContext, setAdminRedirectContext] = useState<'model' | 'filament' | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -51,6 +56,15 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem(ACTIVE_TAB_KEY, activeTab)
   }, [activeTab])
+
+  // Redireciona para Home quando o admin altera o role deste usuário
+  useEffect(() => {
+    const currentRole = allowedUser?.role ?? null
+    if (prevRoleRef.current !== undefined && prevRoleRef.current !== currentRole) {
+      setActiveTab('home')
+    }
+    prevRoleRef.current = currentRole
+  }, [allowedUser?.role])
 
   // Set default tab based on role only if there's no saved tab
   useEffect(() => {
@@ -196,6 +210,8 @@ function AppContent() {
   const renderTab = () => {
     switch (activeTab) {
       case 'home': return <HomeTab onSelect={setActiveTab} />
+      case 'estoque-crochet': return <EstoqueTab type="crochet" onBack={() => setActiveTab('home')} />
+      case 'estoque-3d': return <EstoqueTab type="3d" onBack={() => setActiveTab('home')} />
       case 'crochet': return (
         <CrochetTab
           onUsePrice={handleUsePrice}
@@ -210,6 +226,7 @@ function AppContent() {
           onSaveDashboard={handleSaveDashboardFromThreeD}
           prefillData={threeDPrefill}
           onPrefillConsumed={() => setThreeDPrefill(null)}
+          onNavigateAdmin={(ctx) => { setAdminRedirectContext(ctx); setActiveTab('admin') }}
         />
       )
       case 'insumos': return <InsumosTab />
@@ -221,7 +238,12 @@ function AppContent() {
           onFabricar={handleFabricar}
         />
       )
-      case 'admin': return <AdminTab />
+      case 'admin': return (
+        <AdminTab
+          redirectContext={adminRedirectContext}
+          onBack={() => { setAdminRedirectContext(null); setActiveTab('3d') }}
+        />
+      )
     }
   }
 

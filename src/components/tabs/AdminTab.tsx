@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Trash2, Loader2, Users, BarChart3, LogOut,
-  Pencil, Globe, Layers, ExternalLink, Scissors,
+  Pencil, Globe, Layers, ExternalLink, Scissors, Tag, ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AllowedUser, UserRole, FilamentBrand, Filament, YarnBrand } from '@/lib/types'
+import { AllowedUser, UserRole, FilamentBrand, Filament, YarnBrand, FilamentModel } from '@/lib/types'
 import { cn, formatCurrency } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -44,7 +44,12 @@ function BrandLogo({ name, logoUrl, className }: { name: string; logoUrl?: strin
   )
 }
 
-export function AdminTab() {
+interface AdminTabProps {
+  redirectContext?: 'model' | 'filament' | null
+  onBack?: () => void
+}
+
+export function AdminTab({ redirectContext, onBack }: AdminTabProps) {
   const { allowedUser, signOut } = useAuth()
   const isAdmin = allowedUser?.role === 'admin'
   const isCrochetUser = ['admin', 'crochet', 'both'].includes(allowedUser?.role || '')
@@ -85,6 +90,15 @@ export function AdminTab() {
   const [savingFilament, setSavingFilament] = useState(false)
   const [confirmDeleteFilament, setConfirmDeleteFilament] = useState<string | null>(null)
 
+  // ── Modelos de filamento ─────────────────────────────────────
+  const [filamentModels, setFilamentModels] = useState<FilamentModel[]>([])
+  const [loadingFilamentModels, setLoadingFilamentModels] = useState(true)
+  const [showFilamentModelForm, setShowFilamentModelForm] = useState(false)
+  const [editFilamentModel, setEditFilamentModel] = useState<FilamentModel | null>(null)
+  const [filamentModelName, setFilamentModelName] = useState('')
+  const [savingFilamentModel, setSavingFilamentModel] = useState(false)
+  const [confirmDeleteFilamentModel, setConfirmDeleteFilamentModel] = useState<string | null>(null)
+
   // ── Marcas de fio ────────────────────────────────────────────
   const [yarnBrands, setYarnBrands] = useState<YarnBrand[]>([])
   const [loadingYarnBrands, setLoadingYarnBrands] = useState(true)
@@ -102,6 +116,7 @@ export function AdminTab() {
       fetchStats()
       fetchBrands()
       fetchFilaments()
+      fetchFilamentModels()
     }
   }, [isAdmin])
 
@@ -251,6 +266,7 @@ export function AdminTab() {
     }
     setShowFilamentForm(false); setEditFilament(null); setSavingFilament(false)
     fetchFilaments()
+    if (redirectContext === 'filament') onBack?.()
   }
 
   async function deleteFilament(id: string) {
@@ -259,6 +275,53 @@ export function AdminTab() {
     setFilaments(p => p.filter(f => f.id !== id))
     setConfirmDeleteFilament(null)
     toast.success('Filamento removido')
+  }
+
+  // ── Modelos de filamento ─────────────────────────────────────
+  async function fetchFilamentModels() {
+    setLoadingFilamentModels(true)
+    const { data } = await supabase.from('filament_models').select('*').order('name')
+    if (data) setFilamentModels(data as FilamentModel[])
+    setLoadingFilamentModels(false)
+  }
+
+  function openFilamentModelForm(model?: FilamentModel) {
+    if (model) {
+      setEditFilamentModel(model)
+      setFilamentModelName(model.name)
+    } else {
+      setEditFilamentModel(null)
+      setFilamentModelName('')
+    }
+    setShowFilamentModelForm(true)
+  }
+
+  async function saveFilamentModel() {
+    if (!filamentModelName.trim()) { toast.error('Nome é obrigatório'); return }
+    setSavingFilamentModel(true)
+    if (editFilamentModel) {
+      const { error } = await supabase.from('filament_models').update({ name: filamentModelName.trim() }).eq('id', editFilamentModel.id)
+      if (error) { toast.error('Erro ao salvar modelo'); setSavingFilamentModel(false); return }
+      setFilamentModels(p => p.map(m => m.id === editFilamentModel.id ? { ...m, name: filamentModelName.trim() } : m).sort((a, b) => a.name.localeCompare(b.name)))
+      toast.success('Modelo atualizado')
+    } else {
+      const { data, error } = await supabase.from('filament_models').insert({ name: filamentModelName.trim() }).select().single()
+      if (error || !data) { toast.error('Erro ao salvar modelo'); setSavingFilamentModel(false); return }
+      setFilamentModels(p => [...p, data as FilamentModel].sort((a, b) => a.name.localeCompare(b.name)))
+      toast.success('Modelo adicionado')
+    }
+    setShowFilamentModelForm(false)
+    setEditFilamentModel(null)
+    setSavingFilamentModel(false)
+    if (redirectContext === 'model') onBack?.()
+  }
+
+  async function deleteFilamentModel(id: string) {
+    const { error } = await supabase.from('filament_models').delete().eq('id', id)
+    if (error) { toast.error('Erro ao excluir modelo'); return }
+    setFilamentModels(p => p.filter(m => m.id !== id))
+    setConfirmDeleteFilamentModel(null)
+    toast.success('Modelo removido')
   }
 
   // ── Marcas de fio ────────────────────────────────────────────
@@ -312,6 +375,19 @@ export function AdminTab() {
   // ── Render ───────────────────────────────────────────────────
   return (
     <div className="space-y-4 pb-4">
+
+      {/* Banner de retorno à calculadora */}
+      {redirectContext && (
+        <button
+          onClick={onBack}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/15 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" />
+          <span>
+            {redirectContext === 'model' ? 'Adicione o modelo e salve — voltará à calculadora automaticamente' : 'Adicione o filamento e salve — voltará à calculadora automaticamente'}
+          </span>
+        </button>
+      )}
 
       {/* Perfil + sair */}
       <Card>
@@ -473,7 +549,7 @@ export function AdminTab() {
         </Card>
 
         {/* Filamentos */}
-        <Card>
+        <Card className={redirectContext === 'filament' ? 'ring-2 ring-primary/30' : ''}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-primary">
@@ -514,6 +590,48 @@ export function AdminTab() {
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button onClick={() => setConfirmDeleteFilament(fil.id)}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Modelos de Filamento */}
+        <Card className={redirectContext === 'model' ? 'ring-2 ring-primary/30' : ''}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Tag className="h-4 w-4" /> Modelos de Filamento
+              </CardTitle>
+              <Button size="sm" onClick={() => openFilamentModelForm()} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingFilamentModels ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : filamentModels.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum modelo cadastrado.<br /><span className="text-xs">Ex: High Speed, Basic, Matte, Silk</span></p>
+            ) : (
+              <div className="space-y-2">
+                {filamentModels.map(model => (
+                  <motion.div key={model.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-3 py-2.5 px-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                    <span className="flex-1 text-sm font-medium">{model.name}</span>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => openFilamentModelForm(model)}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setConfirmDeleteFilamentModel(model.id)}
                         className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -713,6 +831,37 @@ export function AdminTab() {
           <DialogFooter className="px-6">
             <Button variant="outline" onClick={() => setConfirmDeleteFilament(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={() => confirmDeleteFilament && deleteFilament(confirmDeleteFilament)}>Remover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modelo de filamento — form */}
+      <Dialog open={showFilamentModelForm} onOpenChange={open => { setShowFilamentModelForm(open); if (!open) setEditFilamentModel(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{editFilamentModel ? 'Editar Modelo' : 'Adicionar Modelo de Filamento'}</DialogTitle></DialogHeader>
+          <div className="space-y-3 px-6">
+            <div>
+              <Label>Nome do modelo</Label>
+              <Input value={filamentModelName} onChange={e => setFilamentModelName(e.target.value)} placeholder="Ex: High Speed, Basic, Matte, Silk" className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter className="px-6">
+            <Button variant="outline" onClick={() => setShowFilamentModelForm(false)}>Cancelar</Button>
+            <Button onClick={saveFilamentModel} disabled={savingFilamentModel} className="gap-2">
+              {savingFilamentModel && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modelo de filamento — confirmar exclusão */}
+      <Dialog open={!!confirmDeleteFilamentModel} onOpenChange={v => !v && setConfirmDeleteFilamentModel(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Remover Modelo?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground px-6">Esta ação não pode ser desfeita.</p>
+          <DialogFooter className="px-6">
+            <Button variant="outline" onClick={() => setConfirmDeleteFilamentModel(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDeleteFilamentModel && deleteFilamentModel(confirmDeleteFilamentModel)}>Remover</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

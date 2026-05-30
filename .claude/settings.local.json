@@ -20,7 +20,11 @@
       "mcp__Claude_in_Chrome__navigate",
       "mcp__Claude_in_Chrome__javascript_tool",
       "mcp__Claude_in_Chrome__read_console_messages",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Miller\\\\Documents\\\\Sites\\\\ClaudeCode\\\\Cro3D\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npx vite *)"
     ]
   }
 }

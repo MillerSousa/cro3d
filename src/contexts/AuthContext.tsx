@@ -117,6 +117,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Realtime: detecta mudança de role do usuário logado
+  useEffect(() => {
+    if (!user?.email) return
+
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'allowed_users',
+          filter: `email=eq.${user.email}`,
+        },
+        (payload) => {
+          const updated = payload.new as AllowedUser
+          setAllowedUser(prev => {
+            if (prev?.role !== updated.role) {
+              writeCache(updated)
+              toast.success('Suas permissões foram atualizadas.')
+            }
+            return updated
+          })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [user?.email])
+
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
