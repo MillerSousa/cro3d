@@ -1,0 +1,23 @@
+{
+  "name": "Cro3D",
+  "short_name": "Cro3D",
+  "description": "Calculadora de precificação para crochê e impressão 3D",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#C4704F",
+  "background_color": "#FAF9F6",
+  "display": "standalone",
+  "start_url": "/"
+}

@@ -27,7 +27,8 @@
       "Bash(npx vite *)",
       "Bash(grep -v \"^$\")",
       "Bash(node -e ' *)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp ok'\\)\")"
     ]
   }
 }
