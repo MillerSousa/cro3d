@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Image as ImageIcon, ExternalLink, Pencil, Trash2,
@@ -20,6 +20,30 @@ import { DashboardModel, CostBreakdown } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { IconSearch, IconX, IconArrowsSort } from '@tabler/icons-react'
+
+// ── Tipos e constantes de ordenação ──────────────────────────────────────────
+type SortOrder = 'newest' | 'oldest' | 'az' | 'za' | 'price_asc' | 'price_desc' | 'in_production' | 'available'
+
+const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+  { value: 'newest',        label: 'Mais recentes' },
+  { value: 'oldest',        label: 'Mais antigos' },
+  { value: 'az',            label: 'A → Z (nome)' },
+  { value: 'za',            label: 'Z → A (nome)' },
+  { value: 'price_asc',     label: 'Menor preço' },
+  { value: 'price_desc',    label: 'Maior preço' },
+  { value: 'in_production', label: 'Em produção primeiro' },
+  { value: 'available',     label: 'Disponível primeiro' },
+]
+
+const SORT_LABELS: Record<SortOrder, string> = Object.fromEntries(
+  SORT_OPTIONS.map(o => [o.value, o.label])
+) as Record<SortOrder, string>
+
+const normalizar = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+const SORT_KEY = 'dashboard_sort'
 
 interface DashboardTabProps {
   prefillData?: {
@@ -62,11 +86,35 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
   const [editModel, setEditModel] = useState<DashboardModel | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
+  // ── Busca e ordenação ─────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [sortOrder, setSortOrder] = useState<SortOrder>(
+    () => (localStorage.getItem(SORT_KEY) as SortOrder) || 'newest'
+  )
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => { fetchModels() }, [])
 
   useEffect(() => {
     if (prefillData) { setShowForm(true); setEditModel(null) }
   }, [prefillData])
+
+  // Persistir ordenação
+  useEffect(() => { localStorage.setItem(SORT_KEY, sortOrder) }, [sortOrder])
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    if (!showSortMenu) return
+    function handleOutside(e: MouseEvent) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [showSortMenu])
 
   async function fetchModels() {
     setLoading(true)
@@ -96,10 +144,44 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
     toast.success('Modelo excluído')
   }
 
-  const filtered = models.filter(m => {
-    if (filterType === 'all') return true
-    return m.type === filterType
-  })
+  const filtered = useMemo(() => {
+    // 1. Filtrar por tipo
+    let result = models.filter(m =>
+      filterType === 'all' ? true : m.type === filterType
+    )
+    // 2. Filtrar por busca
+    const q = searchQuery.trim()
+    if (q) {
+      const nq = normalizar(q)
+      result = result.filter(m => normalizar(m.name).includes(nq))
+    }
+    // 3. Ordenar
+    result = [...result].sort((a, b) => {
+      switch (sortOrder) {
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'az':
+          return a.name.localeCompare(b.name, 'pt-BR')
+        case 'za':
+          return b.name.localeCompare(a.name, 'pt-BR')
+        case 'price_asc':
+          return a.price_per_unit - b.price_per_unit
+        case 'price_desc':
+          return b.price_per_unit - a.price_per_unit
+        case 'in_production': {
+          const o: Record<string, number> = { in_production: 0, available: 1, discontinued: 2 }
+          return (o[a.status] ?? 3) - (o[b.status] ?? 3)
+        }
+        case 'available': {
+          const o: Record<string, number> = { available: 0, in_production: 1, discontinued: 2 }
+          return (o[a.status] ?? 3) - (o[b.status] ?? 3)
+        }
+        default: // newest
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+    return result
+  }, [models, filterType, searchQuery, sortOrder])
 
   const canSeeFilter = role === 'admin' || role === 'both'
 
@@ -130,15 +212,116 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
         </div>
       )}
 
+      {/* ── Barra de busca ── */}
+      <div className="relative" style={{ marginTop: 12, marginBottom: 0 }}>
+        <IconSearch
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar modelo..."
+          className="w-full text-sm outline-none rounded-[12px] bg-white dark:bg-[hsl(var(--card))] transition-colors"
+          style={{
+            padding: '10px 36px 10px 40px',
+            border: searchFocused
+              ? '0.5px solid #D85A30'
+              : '0.5px solid hsl(var(--border))',
+            fontSize: 14,
+          }}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5"
+            style={{ color: 'hsl(var(--muted-foreground))' }}
+          >
+            <IconX size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* ── Contador + Ordenação ── */}
+      {!loading && (
+        <div className="flex items-center justify-between" style={{ marginTop: 8 }}>
+          {/* Contador */}
+          <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            {filtered.length} {filtered.length === 1 ? 'modelo' : 'modelos'}
+          </span>
+
+          {/* Dropdown de ordenação */}
+          <div className="relative" ref={sortMenuRef}>
+            <button
+              onClick={() => setShowSortMenu(p => !p)}
+              className="flex items-center gap-1.5 text-xs font-medium bg-white dark:bg-[hsl(var(--card))] rounded-[20px] transition-colors hover:bg-muted/30"
+              style={{
+                padding: '6px 12px',
+                border: '0.5px solid hsl(var(--border))',
+              }}
+            >
+              <IconArrowsSort size={12} />
+              {SORT_LABELS[sortOrder]}
+            </button>
+
+            {showSortMenu && (
+              <div
+                className="absolute right-0 top-full mt-1 z-20 rounded-[12px] overflow-hidden bg-white dark:bg-[hsl(var(--card))]"
+                style={{
+                  minWidth: 200,
+                  border: '0.5px solid hsl(var(--border))',
+                  boxShadow: 'var(--shadow-card)',
+                }}
+              >
+                {SORT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setSortOrder(opt.value); setShowSortMenu(false) }}
+                    className="flex items-center justify-between w-full px-4 py-2.5 text-xs text-left hover:bg-muted/50 transition-colors"
+                    style={{ color: sortOrder === opt.value ? '#D85A30' : undefined }}
+                  >
+                    {opt.label}
+                    {sortOrder === opt.value && (
+                      <Check className="h-3 w-3 shrink-0" style={{ color: '#D85A30' }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-start">
           {[...Array(6)].map((_, i) => <ModelSkeleton key={i} />)}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : models.length === 0 ? (
+        /* Sem modelos cadastrados */
         <div className="text-center py-16 text-muted-foreground">
           <LayoutGrid className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">Nenhum modelo cadastrado ainda.</p>
           <p className="text-xs mt-1">Clique em "+ Novo modelo" para começar.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        /* Busca/filtro sem resultados */
+        <div className="text-center py-16 text-muted-foreground">
+          <IconSearch size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium">Nenhum modelo encontrado</p>
+          <p className="text-xs mt-1">Tente buscar por outro nome ou mude os filtros.</p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-4 text-xs font-medium px-4 py-2 rounded-full border transition-colors hover:bg-muted/50"
+              style={{ borderColor: 'hsl(var(--border))', color: '#D85A30' }}
+            >
+              Limpar busca
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-stretch">

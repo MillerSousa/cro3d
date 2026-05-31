@@ -268,7 +268,7 @@ export function ThreeDTab({ onUsePrice, onSaveDashboard, prefillData, onPrefillC
     const totalGrams = multiPieceMode ? pieces.reduce((s, p) => s + p.gramsUsed, 0) : gramsUsed
     const effectivePricePerKg = (multiPieceMode && totalGrams > 0)
       ? (filamentCost * 1000) / totalGrams
-      : filamentPricePerKg
+      : effectiveSinglePrice
     const totalPieceMinutes = multiPieceMode
       ? pieces.reduce((s, p) => s + p.timeHours * 60 + p.timeMinutes, 0)
       : timeHours * 60 + timeMinutes

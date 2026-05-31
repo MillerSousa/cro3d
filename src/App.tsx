@@ -130,10 +130,11 @@ function AppContent() {
   }
 
   function handleSaveDashboardFromThreeD(data: ThreeDCalcData & { price: number }) {
+    const r2 = (v: number) => Math.round(v * 100) / 100
     const totalH = data.timeHours + data.timeMinutes / 60
-    const energy = ((data.printer?.wattage || 0) / 1000) * totalH * data.kwh
-    const filament = (data.gramsUsed / 1000) * data.filamentPricePerKg
-    const extrasCost = data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0)
+    const energy = r2(((data.printer?.wattage || 0) / 1000) * totalH * data.kwh)
+    const filament = r2((data.gramsUsed / 1000) * data.filamentPricePerKg)
+    const extrasCost = r2(data.extras.reduce((s, e) => s + e.qty * e.unitPrice, 0))
     const isMulti = !!(data.pieces && data.pieces.length > 0)
     setDashboardPrefill({
       type: '3d',
@@ -142,8 +143,8 @@ function AppContent() {
         // Valores computados para exibição
         energy_cost: energy,
         filament_cost: filament,
-        extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: e.qty * e.unitPrice })),
-        subtotal: energy + filament + extrasCost,
+        extras: data.extras.filter(e => e.name.trim()).map(e => ({ name: e.name, value: r2(e.qty * e.unitPrice) })),
+        subtotal: r2(energy + filament + extrasCost),
         company_margin: data.companyMargin,
         profit_margin: data.profitMargin,
         // Snapshot completo para restaurar a calculadora
