@@ -367,8 +367,16 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
 
                 {/* Pill de tipo — canto superior esquerdo */}
                 <div
-                  className="absolute top-2 left-2 flex items-center gap-1 px-2.5 py-0.5 rounded-full"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
+                  className="absolute top-2 left-2 flex items-center gap-1"
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    borderRadius: '20px',
+                    backgroundColor: 'rgba(255,255,255,0.92)',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                    backdropFilter: 'blur(4px)',
+                  }}
                 >
                   {model.type === 'crochet'
                     ? <Scissors className="h-2.5 w-2.5 shrink-0" style={{ color: '#C4704F' }} />
@@ -385,32 +393,38 @@ export function DashboardTab({ prefillData, onUseModel, onFabricar }: DashboardT
                 {/* Badge de status — canto superior direito */}
                 <span
                   className={cn(
-                    'absolute top-2 right-2 text-[10px] font-medium leading-none px-2.5 py-1 rounded-full',
+                    'absolute top-2 right-2',
                     model.status === 'discontinued' && 'bg-muted text-muted-foreground'
                   )}
-                  style={
-                    model.status === 'available'
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    borderRadius: '20px',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                    backdropFilter: 'blur(4px)',
+                    ...(model.status === 'available'
                       ? { backgroundColor: '#e8f5e9', color: '#3B6D11' }
                       : model.status === 'in_production'
                       ? { backgroundColor: '#fff8e8', color: '#854F0B' }
-                      : undefined
-                  }
+                      : {}),
+                  }}
                 >
                   {STATUS_MAP[model.status].label}
                 </span>
               </div>
 
               {/* ── Área de informações ── */}
-              <div className="p-3.5 space-y-1.5 flex-1 flex flex-col justify-start">
-                <p className="text-[13px] font-medium leading-[1.3] line-clamp-2">{model.name}</p>
+              <div className="p-3.5 space-y-1.5 flex flex-col flex-1">
+                <p className="text-[13px] font-medium leading-[1.3] line-clamp-2 min-h-[2.5rem]">{model.name}</p>
                 <p className="text-lg font-medium" style={{ color: '#C4704F' }}>
                   {formatCurrency(model.price_per_unit)}
                 </p>
                 {(model.time_hours || model.time_minutes) ? (
-                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/60">
+                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/60 self-start max-w-full overflow-hidden">
                     <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-                    <span className="text-[11px] text-muted-foreground">
-                      {formatTime(model.time_hours || 0, model.time_minutes || 0)} de produção
+                    <span className="text-[11px] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                      {formatTime(model.time_hours || 0, model.time_minutes || 0)}
                     </span>
                   </div>
                 ) : null}
